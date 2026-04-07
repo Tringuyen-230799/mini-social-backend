@@ -21,7 +21,7 @@ export class AuthController {
         success: true,
         message: "User registered successfully",
         data: result,
-      };
+      }; 
     } catch (error) {
       if (error instanceof Error) {
         throw new BadRequestException(error.message);
@@ -37,7 +37,7 @@ export class AuthController {
 
       return {
         success: true,
-        message: "Login successful",
+        message: 'Login successful',
         data: result,
       };
     } catch (error) {
@@ -68,6 +68,8 @@ export class AuthController {
       }
 
       const token = authHeader.split(" ")[1];
+
+      console.log(token)
       const decoded = verifyToken(token);
 
       if (!decoded) {
