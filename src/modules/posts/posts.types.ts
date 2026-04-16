@@ -19,7 +19,7 @@ export interface Post {
   updated_at: Date;
 }
 
-export interface PostWithImages {
+export interface Post {
   id: number;
   user_id: number;
   content: string;
@@ -35,4 +35,11 @@ export interface PostWithImages {
     username: string;
     avatar_url: string | null;
   };
+}
+
+export interface AllPostsResponse {
+  totalCount: number;
+  content: Post[];
+  page: number;
+  totalPages: number;
 }
