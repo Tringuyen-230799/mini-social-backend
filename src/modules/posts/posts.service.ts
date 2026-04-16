@@ -1,12 +1,12 @@
 import pool from "~/config/database";
-import { CreatePostDto, Post, PostWithImages } from "./posts.types";
+import { AllPostsResponse, CreatePostDto, Post } from "./posts.types";
 
 export class PostsService {
   async createPost(
     userId: number,
     data: CreatePostDto,
     imagePaths?: string[],
-  ): Promise<PostWithImages> {
+  ): Promise<Post> {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -38,11 +38,14 @@ export class PostsService {
     }
   }
 
-  async getPostById(postId: number): Promise<PostWithImages> {
+  async getPostById(postId: number): Promise<Post> {
     const result = await pool.query(
       `
       SELECT 
-        p.*,
+        p.id,
+        p.content,
+        p.created_at,
+        p.updated_at,
         json_agg(
           json_build_object('id', i.id, 'url', i.url, 'alt_text', i.alt_text)
         ) FILTER (WHERE i.id IS NOT NULL) as images,
@@ -65,12 +68,19 @@ export class PostsService {
 
   async getAllPosts(
     limit: number = 20,
-    offset: number = 0,
-  ): Promise<PostWithImages[]> {
+    page: number,
+  ): Promise<AllPostsResponse> {
+    const offset = ((page || 1) - 1) * limit;
+
+    const totalCount = await pool.query(`SELECT COUNT(*) FROM posts`);
+
     const result = await pool.query(
       `
       SELECT 
-        p.*,
+        p.id,
+        p.content,
+        p.created_at,
+        p.updated_at,
         json_agg(
           json_build_object('id', i.id, 'url', i.url, 'alt_text', i.alt_text)
         ) FILTER (WHERE i.id IS NOT NULL) as images,
@@ -85,6 +95,11 @@ export class PostsService {
       [limit, offset],
     );
 
-    return result.rows;
+    return {
+      totalCount: parseInt(totalCount.rows[0].count, 10),
+      content: result.rows,
+      page: page || 1,
+      totalPages: Math.ceil(totalCount.rows[0].count / limit),
+    };
   }
 }

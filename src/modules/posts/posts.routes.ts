@@ -4,7 +4,7 @@ import { wrapper } from "~/shared/utils/wrapper";
 import { authMiddleware } from "~/middleware/auth.middleware";
 import { upload } from "~/config/multer.config";
 import { validate } from "~/middleware/validate.middleware";
-import { createPostSchema, updatePostSchema } from "./posts.types";
+import { createPostSchema } from "./posts.types";
 
 const router = Router();
 const controller = new PostsController();

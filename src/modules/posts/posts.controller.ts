@@ -63,14 +63,11 @@ export class PostsController {
   getAllPosts = async (req: Request) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const page = parseInt(req.query.page as string) || 1;
 
-      const posts = await this.postsService.getAllPosts(limit, offset);
+      const result = await this.postsService.getAllPosts(limit, page);
 
-      return {
-        success: true,
-        data: posts,
-      };
+      return result;
     } catch (error) {
       throw new InternalException("Internal server error");
     }
