@@ -11,6 +11,10 @@ export class CommentController {
     const { postId } = req.params;
     const { cursor } = req.query;
 
+    if (!postId) {
+      throw new Error("Post ID is required");
+    }
+
     const comments = await this.commentService.getCommentsByPost(
       Number(postId),
       cursor as string,
@@ -20,7 +24,7 @@ export class CommentController {
   }
 
   async createComments(req: Request) {
-    const { postId, content, parentId } = req.body;
+    const { postId, content, parentId, replyUserId } = req.body;
 
     if (!req.user) {
       throw new Error("Unauthorized");
@@ -29,9 +33,10 @@ export class CommentController {
     const userId = req.user.userId;
 
     const post = await this.commentService.createComment(
-      userId,
       postId,
+      userId,
       content,
+      replyUserId,
       parentId,
     );
 

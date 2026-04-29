@@ -8,6 +8,7 @@ export class CommentServices {
     postId: number,
     userId: number,
     content: string,
+    replyUserId: number,
     parentId?: number,
   ) {
     const client: PoolClient = await pool.connect();
@@ -30,18 +31,24 @@ export class CommentServices {
       }
 
       const insertCommentQuery =
-        "INSERT INTO comments (post_id, user_id, content, parent_comment_id) VALUES ($1, $2, $3, $4)";
+        "INSERT INTO comments (post_id, user_id, content, parent_comment_id, reply_user_id) VALUES ($1, $2, $3, $4, $5) RETURNING*";
 
-      const { rows: commentsRow } = await client.query(insertCommentQuery, [
-        postId,
-        userId,
-        content,
-        parentId || null,
-      ]);
+      const { rows } = await client
+        .query(insertCommentQuery, [
+          postId,
+          userId,
+          content,
+          parentId || null,
+          replyUserId,
+        ])
+        .catch((error) => {
+          console.error("Error inserting comment:", error);
+          throw new Error("Failed to create comment");
+        });
 
       await client.query("COMMIT");
 
-      return commentsRow;
+      return rows;
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
@@ -77,36 +84,37 @@ export class CommentServices {
     const totalCountQuery =
       "SELECT COUNT(*) FROM comments WHERE post_id = $1 AND parent_comment_id IS NULL";
 
-    try {
-      const { rows } = await client.query(query, params);
+    const { rows } = await client.query(query, params);
 
-      const { rows: rowCount } = await client.query(totalCountQuery, [postId]);
+    const { rows: rowCount } = await client.query(totalCountQuery, [postId]);
 
-      if (!rows?.length || !rowCount[0]?.count) {
-        throw new NotFoundException("No Comments Found");
-      }
-
-      const lastValue = rows[rows.length - 1];
-
-      const stringifiedCursor = encodeBase64({
-        id: lastValue.id,
-        createdAt: lastValue.created_at.toISOString(),
-      });
-
-      const nextCursor = rows.length === limit ? stringifiedCursor : null;
-
-      const totalCount = parseInt(rowCount[0].count, 10);
-
+    if (!rows?.length || !rowCount[0]?.count) {
       return {
-        comments: rows,
-        nextCursor,
-        totalCount,
-        hasMore: nextCursor !== null,
+        comments: [],
+        nextCursor: null,
+        totalCount: 0,
+        hasMore: false,
       };
-    } catch (error) {
-      return error;
-    } finally {
-      client.release();
     }
+
+    const lastValue = rows[rows.length - 1];
+
+    const stringifiedCursor = encodeBase64({
+      id: lastValue.id,
+      createdAt: lastValue.created_at.toISOString(),
+    });
+
+    const nextCursor = rows.length === limit ? stringifiedCursor : null;
+
+    const totalCount = parseInt(rowCount[0].count, 10);
+
+    client.release();
+
+    return {
+      comments: rows,
+      nextCursor,
+      totalCount,
+      hasMore: nextCursor !== null,
+    };
   }
 }
