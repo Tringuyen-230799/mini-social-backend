@@ -1,7 +1,5 @@
-import bcrypt from "bcrypt";
 import pool from "~/config/database";
 import { SignupDto, LoginDto, AuthResponse, User } from "./auth.types";
-import { SALT_ROUNDS } from "~/shared/constraint";
 import { generateToken } from "~/shared/utils/jwt";
 import { hashedPassword, isPasswordValid } from "~/shared/utils/bcrypt";
 

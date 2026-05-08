@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { AnyZodObject, ZodError } from "zod/v3";
-import { BadRequestException } from "~/shared/utils/error-exception";
 
 export const validate =
   (schema: AnyZodObject) =>
@@ -10,9 +9,23 @@ export const validate =
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        console.log(error)
-        const errorMessages = error.errors.map((err) => err.message).join(", ");
-        throw new BadRequestException(errorMessages);
+        const zodError = error.errors.map((err) => ({
+          field: err.path[0],
+          message: err.message,
+        }));
+
+        if (process.env.NODE_ENV == "PRODUCTION") {
+          res.status(400).json({
+            status: 400,
+            message: `Invalid field`,
+          });
+        }
+
+        res.status(400).json({
+          status: 400,
+          message: `Validation error`,
+          error: zodError,
+        });
       }
       next(error);
     }

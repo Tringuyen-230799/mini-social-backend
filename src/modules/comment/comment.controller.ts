@@ -11,7 +11,7 @@ export class CommentController {
     const { postId } = req.params;
     const { cursor } = req.query;
 
-    if (!postId) {
+    if (!postId || isNaN(Number(postId))) {
       throw new Error("Post ID is required");
     }
 
@@ -24,7 +24,7 @@ export class CommentController {
   }
 
   async createComments(req: Request) {
-    const { postId, content, parentId, replyUserId } = req.body;
+    const { postId, content, parentId } = req.body;
 
     if (!req.user) {
       throw new Error("Unauthorized");
@@ -36,10 +36,27 @@ export class CommentController {
       postId,
       userId,
       content,
-      replyUserId,
       parentId,
     );
 
     return post;
+  }
+
+  async getRepliesByComment(req: Request) {
+    const { commentId } = req.params;
+
+    const { page = 1, limit = 5 } = req.query;
+
+    if (!commentId || isNaN(Number(commentId))) {
+      throw new Error("Comment ID is required");
+    }
+
+    const replies = await this.commentService.getRepliesByComment(
+      Number(commentId),
+      Number(page),
+      Number(limit),
+    );
+
+    return replies;
   }
 }

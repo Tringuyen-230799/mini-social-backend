@@ -13,5 +13,9 @@ router.post(
 );
 
 router.get("/:postId", wrapper(controller.getCommentsByPost.bind(controller)));
+router.get(
+  "/replies/:commentId",
+  wrapper(controller.getRepliesByComment.bind(controller)),
+);
 
 export default router;
