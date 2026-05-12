@@ -9,6 +9,7 @@ export class CommentServices {
     userId: number,
     content: string,
     parentId?: number,
+    mentions?: number[],
   ) {
     const client: PoolClient = await pool.connect();
     try {
@@ -34,12 +35,7 @@ export class CommentServices {
         "INSERT INTO comments (post_id, user_id, content, parent_comment_id) VALUES ($1, $2, $3, $4) RETURNING*";
 
       const { rows } = await client
-        .query(insertCommentQuery, [
-          postId,
-          userId,
-          content,
-          parentId || null,
-        ])
+        .query(insertCommentQuery, [postId, userId, content, parentId || null])
         .catch((error) => {
           console.error("Error inserting comment:", error);
           throw new Error("Failed to create comment");
@@ -73,7 +69,8 @@ export class CommentServices {
 
     const query = `SELECT
       c.*,
-      json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user
+      json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
+      (SELECT COUNT(*)::int FROM comments WHERE parent_comment_id = c.id) AS total_replies
     FROM comments c 
     JOIN users u ON c.user_id = u.id
     WHERE c.post_id = $1 AND c.parent_comment_id IS NULL ${whereClause} 
@@ -127,7 +124,7 @@ export class CommentServices {
     const offset = (page - 1) * limit;
     const query = `SELECT
         c.*,
-        json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user
+        json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
       FROM comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.parent_comment_id = $1

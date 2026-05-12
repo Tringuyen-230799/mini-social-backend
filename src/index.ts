@@ -20,6 +20,7 @@ function startServer() {
   app.use("/uploads", express.static("uploads"));
 
   app.get("/health-check", (req, res) => {
+    console.log("Health check endpoint hit");
     res.send("Health check");
   });
 

@@ -1,5 +1,6 @@
 import { Request } from "express";
 import { CommentServices } from "./comment.service";
+import { CreateCommentDto } from "./dto/createCommentSchemas";
 
 export class CommentController {
   private commentService: CommentServices;
@@ -24,7 +25,7 @@ export class CommentController {
   }
 
   async createComments(req: Request) {
-    const { postId, content, parentId } = req.body;
+    const { postId, content, parentId, mentions } = req.body as CreateCommentDto;
 
     if (!req.user) {
       throw new Error("Unauthorized");
@@ -32,19 +33,19 @@ export class CommentController {
 
     const userId = req.user.userId;
 
-    const post = await this.commentService.createComment(
+    const comment = await this.commentService.createComment(
       postId,
       userId,
       content,
       parentId,
+      mentions,
     );
 
-    return post;
+    return comment;
   }
 
   async getRepliesByComment(req: Request) {
     const { commentId } = req.params;
-
     const { page = 1, limit = 5 } = req.query;
 
     if (!commentId || isNaN(Number(commentId))) {
