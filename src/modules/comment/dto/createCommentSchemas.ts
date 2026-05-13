@@ -8,3 +8,12 @@ export const CreateCommentSchema = z.object({
 });
 
 export type CreateCommentDto = z.infer<typeof CreateCommentSchema>;
+export type CreateCommentResDto = {
+  id: number;
+  content: string;
+  createdAt: Date;
+  userId: number;
+  postId: number;
+  mentions?: number[];
+  parentId?: number | null;
+};

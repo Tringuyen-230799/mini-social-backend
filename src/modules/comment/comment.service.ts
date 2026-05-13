@@ -2,54 +2,96 @@ import { PoolClient } from "pg";
 import pool from "~/config/database";
 import { decodeBase64, encodeBase64 } from "~/shared/utils/common";
 import { NotFoundException } from "~/shared/utils/error-exception";
+import { withTransaction } from "~/shared/utils/transaction";
+import { CommentRepository } from "./comment.repository";
+import PostRepository from "~/shared/repository/posts.repo";
+import { MentionsRepository } from "~/shared/repository/mentions.repo";
+import { CommentEntity } from "./comment.entity";
+import { MentionEntity } from "~/shared/entity/mentions.entity";
+import { CreateCommentResDto } from "./dto/createCommentSchemas";
 
 export class CommentServices {
+  private commentRepository: CommentRepository;
+  private postRepository: PostRepository;
+  private mentionsRepository: MentionsRepository;
+  constructor() {
+    this.commentRepository = new CommentRepository();
+    this.postRepository = new PostRepository();
+    this.mentionsRepository = new MentionsRepository();
+  }
+
+  private async createCommentWithMentions(
+    postId: number,
+    userId: number,
+    content: string,
+    mentions: number[] | undefined,
+    tx: PoolClient,
+    parentId?: number | undefined,
+  ): Promise<CommentEntity> {
+    const result = await this.commentRepository.createComment(
+      postId,
+      userId,
+      content,
+      parentId,
+      tx,
+    );
+
+    if (mentions?.length) {
+      const mentionsResult = await this.mentionsRepository.createMentions(
+        result.id,
+        mentions,
+        tx,
+      );
+
+      return {
+        ...result,
+        mentions: mentionsResult.map(
+          (mention: MentionEntity) => mention.mentioned_user_id,
+        ),
+      };
+    }
+
+    return result;
+  }
+
   async createComment(
     postId: number,
     userId: number,
     content: string,
     parentId?: number,
     mentions?: number[],
-  ) {
-    const client: PoolClient = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      const findPostQuery = "SELECT * FROM posts WHERE id = $1";
-      const { rows: post } = await client.query(findPostQuery, [postId]);
+  ): Promise<CreateCommentResDto> {
+    return withTransaction(async (tx) => {
+      const post = await this.postRepository.findPostById(postId, tx);
 
-      if (!post?.length) {
+      if (!post) {
         throw new NotFoundException("No Post Found");
       }
 
       if (parentId) {
-        const findParentId =
-          "SELECT * FROM comments c, posts p WHERE c.id = $1 AND c.post_id = $2 AND p.id = c.post_id";
-        const { rows } = await client.query(findParentId, [parentId, postId]);
+        const parentComments =
+          await this.commentRepository.getParentCommentsByPost(
+            postId,
+            parentId,
+            tx,
+          );
 
-        if (!rows?.length) {
+        if (!parentComments?.length) {
           throw new NotFoundException("No Parent Comment Found");
         }
       }
 
-      const insertCommentQuery =
-        "INSERT INTO comments (post_id, user_id, content, parent_comment_id) VALUES ($1, $2, $3, $4) RETURNING*";
+      const result = await this.createCommentWithMentions(
+        postId,
+        userId,
+        content,
+        mentions,
+        tx,
+        parentId,
+      );
 
-      const { rows } = await client
-        .query(insertCommentQuery, [postId, userId, content, parentId || null])
-        .catch((error) => {
-          console.error("Error inserting comment:", error);
-          throw new Error("Failed to create comment");
-        });
-
-      await client.query("COMMIT");
-
-      return rows;
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+      return result;
+    });
   }
 
   async getCommentsByPost(postId: number, cursor?: string, limit: number = 10) {
@@ -67,10 +109,16 @@ export class CommentServices {
       ? [postId, limit, parseCursor.createdAt, parseCursor.id]
       : [postId, limit];
 
-    const query = `SELECT
+    const query = `
+      SELECT
       c.*,
       json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
-      (SELECT COUNT(*)::int FROM comments WHERE parent_comment_id = c.id) AS total_replies
+      (SELECT COUNT(*)::int FROM comments WHERE parent_comment_id = c.id) AS total_replies,
+        (SELECT json_agg(json_build_object('id', m.id, 'username', u2.username, 'avatar', u2.avatar_url)) 
+         FROM mentions m
+         JOIN users u2 ON m.mentioned_user_id = u2.id
+         WHERE m.comment_id = c.id
+        ) AS mentions
     FROM comments c 
     JOIN users u ON c.user_id = u.id
     WHERE c.post_id = $1 AND c.parent_comment_id IS NULL ${whereClause} 
@@ -125,6 +173,11 @@ export class CommentServices {
     const query = `SELECT
         c.*,
         json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
+        (SELECT json_agg(json_build_object('id', m.id, 'username', u2.username, 'avatar', u2.avatar_url)) 
+         FROM mentions m
+         JOIN users u2 ON m.mentioned_user_id = u2.id
+         WHERE m.comment_id = c.id
+        ) AS mentions
       FROM comments c
       JOIN users u ON c.user_id = u.id
       WHERE c.parent_comment_id = $1

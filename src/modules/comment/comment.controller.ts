@@ -25,7 +25,10 @@ export class CommentController {
   }
 
   async createComments(req: Request) {
-    const { postId, content, parentId, mentions } = req.body as CreateCommentDto;
+    const { postId, content, parentId, mentions } =
+      req.body as CreateCommentDto;
+
+    console.log("Received mentions:", mentions);  
 
     if (!req.user) {
       throw new Error("Unauthorized");
