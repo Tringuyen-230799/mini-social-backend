@@ -7,3 +7,8 @@ export const decodeBase64 = (cursor?: string): any => {
 export const encodeBase64 = (payload: unknown): string => {
   return Buffer.from(JSON.stringify(payload)).toString("base64");
 };
+
+
+export const buildTree = () => {
+  
+}

@@ -1,9 +1,8 @@
-import bcrypt from "bcrypt";
 import pool from "~/config/database";
 import { SignupDto, LoginDto, AuthResponse, User } from "./auth.types";
-import { SALT_ROUNDS } from "~/shared/constraint";
 import { generateToken } from "~/shared/utils/jwt";
 import { hashedPassword, isPasswordValid } from "~/shared/utils/bcrypt";
+import { BadRequestException } from "~/shared/utils/error-exception";
 
 export class AuthService {
   async signup(data: SignupDto): Promise<AuthResponse> {
@@ -55,7 +54,7 @@ export class AuthService {
     );
 
     if (result.rows.length === 0) {
-      throw new Error("Invalid email or password");
+      throw new BadRequestException("Invalid email or password");
     }
 
     const user = result.rows[0];
@@ -63,7 +62,7 @@ export class AuthService {
     const isValid = await isPasswordValid(password, user.password);
 
     if (!isValid) {
-      throw new Error("Invalid email or password");
+      throw new BadRequestException("Invalid email or password");
     }
 
     // Generate JWT token

@@ -1,5 +1,6 @@
 import { Request } from "express";
 import { CommentServices } from "./comment.service";
+import { CreateCommentDto } from "./dto/createCommentSchemas";
 
 export class CommentController {
   private commentService: CommentServices;
@@ -11,6 +12,10 @@ export class CommentController {
     const { postId } = req.params;
     const { cursor } = req.query;
 
+    if (!postId || isNaN(Number(postId))) {
+      throw new Error("Post ID is required");
+    }
+
     const comments = await this.commentService.getCommentsByPost(
       Number(postId),
       cursor as string,
@@ -20,7 +25,8 @@ export class CommentController {
   }
 
   async createComments(req: Request) {
-    const { postId, content, parentId } = req.body;
+    const { postId, content, parentId, mentions } =
+      req.body as CreateCommentDto;
 
     if (!req.user) {
       throw new Error("Unauthorized");
@@ -28,13 +34,31 @@ export class CommentController {
 
     const userId = req.user.userId;
 
-    const post = await this.commentService.createComment(
-      userId,
+    const comment = await this.commentService.createComment(
       postId,
+      userId,
       content,
       parentId,
+      mentions,
     );
 
-    return post;
+    return comment;
+  }
+
+  async getRepliesByComment(req: Request) {
+    const { commentId } = req.params;
+    const { page = 1, limit = 5 } = req.query;
+
+    if (!commentId || isNaN(Number(commentId))) {
+      throw new Error("Comment ID is required");
+    }
+
+    const replies = await this.commentService.getRepliesByComment(
+      Number(commentId),
+      Number(page),
+      Number(limit),
+    );
+
+    return replies;
   }
 }

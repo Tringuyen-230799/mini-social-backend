@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS mentions (
+    id SERIAL PRIMARY KEY,
+    comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    mentioned_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
