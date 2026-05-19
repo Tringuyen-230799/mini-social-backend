@@ -28,8 +28,6 @@ export class CommentController {
     const { postId, content, parentId, mentions } =
       req.body as CreateCommentDto;
 
-    console.log("Received mentions:", mentions);  
-
     if (!req.user) {
       throw new Error("Unauthorized");
     }
