@@ -1,5 +1,13 @@
 import pool from "~/config/database";
-import { AllPostsResponse, CreatePostDto, Post } from "./posts.types";
+import {
+  AllPostsResponse,
+  CreatePostDto,
+  Post,
+  UpdatePostDto,
+} from "./posts.types";
+import { BadRequestException } from "~/shared/utils/error-exception";
+import { withTransaction } from "~/shared/utils/transaction";
+import { PoolClient } from "pg";
 
 export class PostsService {
   async createPost(
@@ -60,7 +68,7 @@ export class PostsService {
     );
 
     if (result.rows.length === 0) {
-      throw new Error("Post not found");
+      throw new BadRequestException("Post not found");
     }
 
     return result.rows[0];
@@ -101,5 +109,46 @@ export class PostsService {
       page: page || 1,
       totalPages: Math.ceil(totalCount.rows[0].count / limit),
     };
+  }
+
+  async updatePost(payload: UpdatePostDto) {
+    const { id, content, userId, newImages } = payload;
+
+    return withTransaction(async (tx) => {
+      const {
+        rows: [post],
+      } = await tx.query(
+        `SELECT * FROM posts WHERE id = ${id} AND user_id = ${userId}`,
+      );
+
+      if (!post) {
+        throw new BadRequestException("No post found");
+      }
+
+      if (newImages) {
+        if (newImages && newImages.length > 0) {
+          for (const path of newImages) {
+            await tx.query(
+              "INSERT INTO images (post_id, url) VALUES ($1, $2)",
+              [id, path],
+            );
+          }
+        }
+      }
+
+      if (post?.content !== content) {
+        const updateQuery = `
+          UPDATE posts 
+          SET content = $1
+          WHERE id = $2
+          RETURNING *
+        `;
+        const {
+          rows: [post],
+        } = await tx.query(updateQuery, [content, id]);
+
+        return post;
+      }
+    });
   }
 }

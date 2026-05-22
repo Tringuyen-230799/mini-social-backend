@@ -6,10 +6,15 @@ export const createPostSchema = z.object({
 
 export const updatePostSchema = z.object({
   content: z.string().min(1).max(5000).optional(),
+  oldImageUrl: z.string().optional(),
 });
 
 export type CreatePostDto = z.infer<typeof createPostSchema>;
-export type UpdatePostDto = z.infer<typeof updatePostSchema>;
+export type UpdatePostDto = z.infer<typeof updatePostSchema> & {
+  newImages?: string[] | string;
+  id: string | number;
+  userId: string | number;
+};
 
 export interface Post {
   id: number;
@@ -18,7 +23,6 @@ export interface Post {
   created_at: Date;
   updated_at: Date;
 }
-
 export interface Post {
   id: number;
   user_id: number;
