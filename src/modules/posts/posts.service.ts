@@ -7,32 +7,39 @@ import {
 } from "./posts.types";
 import { BadRequestException } from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
-import { PoolClient } from "pg";
+import cloudiary, { CloudiaryService } from "~/config/cloudiary";
 
 export class PostsService {
+  private cloudinaryServices: CloudiaryService;
+  constructor() {
+    this.cloudinaryServices = cloudiary;
+  }
+
   async createPost(
     userId: number,
     data: CreatePostDto,
-    imagePaths?: string[],
+    file: Express.Multer.File,
   ): Promise<Post> {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
 
-      const postResult = await client.query(
+      const {
+        rows: [post],
+      } = await client.query(
         "INSERT INTO posts (user_id, content) VALUES ($1, $2) RETURNING *",
         [userId, data.content],
       );
 
-      const post = postResult.rows[0];
+      if (post) {
+        const { public_id, secure_url } =
+          await this.cloudinaryServices.uploadFile(file);
 
-      if (imagePaths && imagePaths.length > 0) {
-        for (const path of imagePaths) {
-          await client.query(
-            "INSERT INTO images (post_id, url) VALUES ($1, $2)",
-            [post.id, path],
-          );
-        }
+        await client.query(
+          `INSERT INTO images (post_id, url, alt_text, created_at, public_id)
+           VALUES ($1, $2, $3, NOW(), $4)`,
+          [post.id, secure_url, null, public_id],
+        );
       }
 
       await client.query("COMMIT");

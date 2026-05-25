@@ -12,7 +12,7 @@ const controller = new PostsController();
 router.post(
   "/",
   authMiddleware,
-  upload.array("images", 5),
+  upload.single("images"),
   validate(createPostSchema),
   wrapper(controller.createPost.bind(controller)),
 );

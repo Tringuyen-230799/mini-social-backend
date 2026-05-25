@@ -1,6 +1,7 @@
 import { Request } from "express";
 import { PostsService } from "./posts.service";
 import { BadRequestException } from "~/shared/utils/error-exception";
+import cloudiary from "~/config/cloudiary";
 
 export class PostsController {
   private postsService: PostsService;
@@ -15,15 +16,12 @@ export class PostsController {
     }
 
     const { content } = req.body;
-    const files = req.files as Express.Multer.File[];
-    const imagePaths = files
-      ? files.map((file) => `${process.env.BASE_URL}/uploads/${file.filename}`)
-      : [];
+    const file = req.file as Express.Multer.File;
 
     const post = await this.postsService.createPost(
       req.user.userId,
       { content },
-      imagePaths,
+      file,
     );
 
     return {
@@ -66,7 +64,7 @@ export class PostsController {
       content,
       newImages: imagePaths,
       id: postId,
-      userId: req.user.userId
+      userId: req.user.userId,
     });
   };
 }
