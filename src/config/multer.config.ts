@@ -15,6 +15,8 @@ import { Request } from "express";
 //   },
 // });
 
+const FILE_SIZE_UPLOAD = 100 * 1000000;
+
 const storage = multer.memoryStorage();
 
 const fileFilter = (
@@ -22,7 +24,7 @@ const fileFilter = (
   file: Express.Multer.File,
   cb: multer.FileFilterCallback,
 ) => {
-  const allowedTypes = /jpeg|jpg|png|gif|webp/;
+  const allowedTypes = /jpeg|jpg|png|gif|webp|mp4/;
   const extname = allowedTypes.test(
     path.extname(file.originalname).toLowerCase(),
   );
@@ -37,8 +39,8 @@ const fileFilter = (
 
 export const upload = multer({
   storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-  },
   fileFilter,
+  limits: {
+    fileSize: FILE_SIZE_UPLOAD,
+  },
 });

@@ -78,7 +78,15 @@ export class CloudiaryService {
     }
   };
 
-  async deleteImage() {}
+  async deleteFile(publicId: string) {
+    try {
+      const result = await cloudinary.uploader.destroy(publicId);
+      return result;
+    } catch (error) {
+      console.error("Cloudinary upload error:", error);
+      throw new BadRequestException("Failed to upload file to Cloudinary");
+    }
+  }
 
   getCloudinary() {
     return cloudinary;

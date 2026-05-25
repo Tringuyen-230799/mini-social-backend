@@ -8,17 +8,21 @@ import {
 import { BadRequestException } from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
 import cloudiary, { CloudiaryService } from "~/config/cloudiary";
+import { PostRepository } from "~/repository/posts.repository";
+import { Resources } from "~/shared/types/resources";
 
 export class PostsService {
   private cloudinaryServices: CloudiaryService;
+  private postRepository: PostRepository;
   constructor() {
     this.cloudinaryServices = cloudiary;
+    this.postRepository = new PostRepository();
   }
 
   async createPost(
     userId: number,
     data: CreatePostDto,
-    file: Express.Multer.File,
+    file?: Express.Multer.File,
   ): Promise<Post> {
     const client = await pool.connect();
     try {
@@ -31,14 +35,14 @@ export class PostsService {
         [userId, data.content],
       );
 
-      if (post) {
-        const { public_id, secure_url } =
+      if (post && file) {
+        const { public_id, secure_url, resource_type } =
           await this.cloudinaryServices.uploadFile(file);
 
         await client.query(
-          `INSERT INTO images (post_id, url, alt_text, created_at, public_id)
-           VALUES ($1, $2, $3, NOW(), $4)`,
-          [post.id, secure_url, null, public_id],
+          `INSERT INTO resources (post_id, url, alt_text, created_at, public_id, resource_type)
+           VALUES ($1, $2, $3, NOW(), $4, $5)`,
+          [post.id, secure_url, null, public_id, resource_type],
         );
       }
 
@@ -62,11 +66,11 @@ export class PostsService {
         p.created_at,
         p.updated_at,
         json_agg(
-          json_build_object('id', i.id, 'url', i.url, 'alt_text', i.alt_text)
-        ) FILTER (WHERE i.id IS NOT NULL) as images,
+          json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
+        ) FILTER (WHERE r.id IS NOT NULL) as resources,
         json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) as user
       FROM posts p
-      LEFT JOIN images i ON p.id = i.post_id
+      LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
       WHERE p.id = $1
       GROUP BY p.id, u.id
@@ -97,11 +101,11 @@ export class PostsService {
         p.created_at,
         p.updated_at,
         json_agg(
-          json_build_object('id', i.id, 'url', i.url, 'alt_text', i.alt_text)
-        ) FILTER (WHERE i.id IS NOT NULL) as images,
+          json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
+        ) FILTER (WHERE r.id IS NOT NULL) as resources,
         json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) as user
       FROM posts p
-      LEFT JOIN images i ON p.id = i.post_id
+      LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
       GROUP BY p.id, u.id
       ORDER BY p.created_at DESC
@@ -118,44 +122,60 @@ export class PostsService {
     };
   }
 
-  async updatePost(payload: UpdatePostDto) {
-    const { id, content, userId, newImages } = payload;
+  async updatePost(payload: UpdatePostDto, file?: Express.Multer.File) {
+    const { content, id, userId, oldImageIds } = payload;
 
     return withTransaction(async (tx) => {
-      const {
-        rows: [post],
-      } = await tx.query(
-        `SELECT * FROM posts WHERE id = ${id} AND user_id = ${userId}`,
-      );
+      const post = await this.postRepository.findPostByUser(id, userId, tx);
 
       if (!post) {
-        throw new BadRequestException("No post found");
+        throw new BadRequestException("Post not found");
       }
 
-      if (newImages) {
-        if (newImages && newImages.length > 0) {
-          for (const path of newImages) {
-            await tx.query(
-              "INSERT INTO images (post_id, url) VALUES ($1, $2)",
-              [id, path],
-            );
-          }
+      if (oldImageIds) {
+        const ids = oldImageIds.join(", ");
+
+        const { rows: resources } = await tx.query<Resources>(
+          "SELECT * FROM resources WHERE post_id = $1 AND id IN ($2)",
+          [post.id, ids],
+        );
+
+        if (!resources.length) {
+          throw new BadRequestException("Resources not found");
         }
+
+        const resourceIds = resources.map((res) => res.id).join(", ");
+        const publicIds = resources.map((res) => res.public_id);
+
+        const deleteOldResources = await tx.query(
+          `DELETE FROM resources WHERE id IN (${resourceIds})`,
+        );
+
+        await Promise.all([
+          deleteOldResources,
+          ...publicIds.map((id) => this.cloudinaryServices.deleteFile(id)),
+        ]);
       }
 
-      if (post?.content !== content) {
-        const updateQuery = `
-          UPDATE posts 
-          SET content = $1
-          WHERE id = $2
-          RETURNING *
-        `;
-        const {
-          rows: [post],
-        } = await tx.query(updateQuery, [content, id]);
+      if (file) {
+        const { public_id, secure_url, resource_type } =
+          await this.cloudinaryServices.uploadFile(file);
 
-        return post;
+        await tx.query(
+          `INSERT INTO resources (post_id, url, alt_text, created_at, public_id, resource_type)
+           VALUES ($1, $2, $3, NOW(), $4, $5)`,
+          [post.id, secure_url, null, public_id, resource_type],
+        );
       }
+
+      if (post.content !== content) {
+        await tx.query(
+          `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
+          [content, id, userId],
+        );
+      }
+
+      return await this.getPostById(id);
     });
   }
 }

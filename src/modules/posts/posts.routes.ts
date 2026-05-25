@@ -20,10 +20,11 @@ router.post(
 router.get("/", wrapper(controller.getAllPosts.bind(controller)));
 
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
+
 router.patch(
   "/:id",
   authMiddleware,
-  upload.array("images", 5),
+  upload.single("images"),
   wrapper(controller.updatePost.bind(controller)),
 );
 

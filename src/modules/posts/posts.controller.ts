@@ -53,18 +53,18 @@ export class PostsController {
     }
 
     const postId = parseInt(req.params?.id as string);
-    const { content } = req.body;
+    const { content, oldImageIds } = req.body;
 
-    const files = req.files as Express.Multer.File[];
-    const imagePaths = files.map(
-      (file) => `${process.env.BASE_URL}/uploads/${file.filename}`,
+    const file = req.file as Express.Multer.File;
+
+    return await this.postsService.updatePost(
+      {
+        content,
+        id: postId,
+        userId: req.user.id,
+        oldImageIds,
+      },
+      file,
     );
-
-    return await this.postsService.updatePost({
-      content,
-      newImages: imagePaths,
-      id: postId,
-      userId: req.user.id,
-    });
   };
 }

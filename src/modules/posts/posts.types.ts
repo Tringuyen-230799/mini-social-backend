@@ -1,20 +1,18 @@
 import { z } from "zod/v3";
 
 export const createPostSchema = z.object({
-  content: z.string().min(1).max(5000),
+  content: z.string().min(1).max(255),
 });
 
 export const updatePostSchema = z.object({
-  content: z.string().min(1).max(5000).optional(),
-  oldImageUrl: z.string().optional(),
+  content: z.string().min(1).max(255).optional(),
+  userId: z.number(),
+  oldImageIds: z.array(z.string()).optional(),
+  id: z.number()
 });
 
 export type CreatePostDto = z.infer<typeof createPostSchema>;
-export type UpdatePostDto = z.infer<typeof updatePostSchema> & {
-  newImages?: string[] | string;
-  id: string | number;
-  userId: string | number;
-};
+export type UpdatePostDto = z.infer<typeof updatePostSchema>;
 
 export interface Post {
   id: number;
@@ -29,7 +27,7 @@ export interface Post {
   content: string;
   created_at: Date;
   updated_at: Date;
-  images: Array<{
+  resources: Array<{
     id: number;
     url: string;
     alt_text: string | null;

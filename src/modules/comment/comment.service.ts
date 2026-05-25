@@ -4,11 +4,11 @@ import { decodeBase64, encodeBase64 } from "~/shared/utils/common";
 import { NotFoundException } from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
 import { CommentRepository } from "../../repository/comment.repository";
-import PostRepository from "~/shared/repository/posts.repo";
-import { MentionsRepository } from "~/shared/repository/mentions.repo";
 import { CommentEntity } from "./comment.entity";
 import { MentionEntity } from "~/shared/entity/mentions.entity";
 import { CreateCommentResDto } from "./dto/createCommentSchemas";
+import { PostRepository } from "~/repository/posts.repository";
+import { MentionsRepository } from "~/repository/mentions.repo";
 
 export class CommentServices {
   private commentRepository: CommentRepository;
