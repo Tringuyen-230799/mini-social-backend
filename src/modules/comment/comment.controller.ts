@@ -32,7 +32,7 @@ export class CommentController {
       throw new Error("Unauthorized");
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const comment = await this.commentService.createComment(
       postId,

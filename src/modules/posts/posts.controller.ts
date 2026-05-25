@@ -25,7 +25,7 @@ export class PostsController {
         : [];
 
       const post = await this.postsService.createPost(
-        req.user.userId,
+        req.user.id,
         { content },
         imagePaths,
       );
