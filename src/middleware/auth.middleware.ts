@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from "express";
+import { User } from "~/modules/auth/auth.types";
+import { UserRepository } from "~/repository/user.repository";
 import { verifyToken } from "~/shared/utils/jwt";
 
 export const authMiddleware = async (
@@ -7,6 +9,7 @@ export const authMiddleware = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
+    const userServices = new UserRepository();
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -20,7 +23,7 @@ export const authMiddleware = async (
 
     if (token === process.env.TEST_TOKEN) {
       req.user = {
-        userId: Number(process.env.userTestId),
+        id: Number(process.env.userTestId),
       };
       next();
       return;
@@ -35,9 +38,19 @@ export const authMiddleware = async (
       return;
     }
 
+    const user = (await userServices.findUserById(decoded.userId)) as User;
+
+    if (!user) {
+      res.status(401).json({
+        message: "Invalid or expired token",
+      });
+    }
+
     req.user = {
-      userId: decoded.userId,
-      email: decoded.email,
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      avatar_url: user.avatar_url || undefined,
     };
 
     next();

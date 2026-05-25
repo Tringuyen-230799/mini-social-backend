@@ -3,7 +3,7 @@ import pool from "~/config/database";
 import { decodeBase64, encodeBase64 } from "~/shared/utils/common";
 import { NotFoundException } from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
-import { CommentRepository } from "./comment.repository";
+import { CommentRepository } from "../../repository/comment.repository";
 import PostRepository from "~/shared/repository/posts.repo";
 import { MentionsRepository } from "~/shared/repository/mentions.repo";
 import { CommentEntity } from "./comment.entity";

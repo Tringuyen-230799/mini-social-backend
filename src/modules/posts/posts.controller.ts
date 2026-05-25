@@ -19,7 +19,7 @@ export class PostsController {
     const file = req.file as Express.Multer.File;
 
     const post = await this.postsService.createPost(
-      req.user.userId,
+      req.user.id,
       { content },
       file,
     );
@@ -64,7 +64,7 @@ export class PostsController {
       content,
       newImages: imagePaths,
       id: postId,
-      userId: req.user.userId,
+      userId: req.user.id,
     });
   };
 }

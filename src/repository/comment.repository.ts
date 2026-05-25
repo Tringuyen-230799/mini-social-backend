@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
-import { CommentEntity } from "./comment.entity";
+import { CommentEntity } from "../modules/comment/comment.entity";
 
 export class CommentRepository {
   async createComment(
