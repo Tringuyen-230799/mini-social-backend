@@ -38,7 +38,7 @@ export const authMiddleware = async (
       return;
     }
 
-    const user = await userServices.findUserById(decoded?.userId) as User;
+    const user = (await userServices.findUserById(decoded?.userId)) as User;
 
     if (!user) {
       res.status(401).json({
@@ -55,7 +55,7 @@ export const authMiddleware = async (
 
     next();
   } catch (error) {
-    console.log(error)
+    console.log(error);
     res.status(401).json({
       message: "Invalid or expired token",
     });

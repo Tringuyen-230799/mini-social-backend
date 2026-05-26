@@ -25,7 +25,6 @@ export class AuthController {
   };
 
   me = async (req: Request) => {
-    console.log(req.user)
     return req.user
   };
 }

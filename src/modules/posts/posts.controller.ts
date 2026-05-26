@@ -61,12 +61,6 @@ export class PostsController {
       ? req.body.oldImageIds
       : req.body.oldImageIds?.split(",");
 
-    if (req.file && !oldImageIds?.length) {
-      throw new BadRequestException(
-        'Please Provide old image before update the new one',
-      );
-    }
-
     return await this.postsService.updatePost(
       {
         content,

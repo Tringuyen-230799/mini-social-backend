@@ -108,6 +108,24 @@ export class PostsService {
         throw new BadRequestException("Post not found");
       }
 
+      if (file) {
+        const { public_id, secure_url, resource_type } =
+          await this.cloudinaryServices.uploadFile(file);
+
+        await tx.query(
+          `INSERT INTO resources (post_id, url, alt_text, created_at, public_id, resource_type)
+           VALUES ($1, $2, $3, NOW(), $4, $5)`,
+          [post.id, secure_url, null, public_id, resource_type],
+        );
+      }
+
+      if (content && post.content !== content) {
+        await tx.query(
+          `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
+          [content, id, userId],
+        );
+      }
+
       if (oldImageIds) {
         const { rows: resources } = await tx.query<Resources>(
           "SELECT * FROM resources WHERE post_id = $1 AND id = ANY($2)",
@@ -130,24 +148,6 @@ export class PostsService {
           deleteOldResources,
           ...publicIds.map((id) => this.cloudinaryServices.deleteFile(id)),
         ]);
-      }
-
-      if (file) {
-        const { public_id, secure_url, resource_type } =
-          await this.cloudinaryServices.uploadFile(file);
-
-        await tx.query(
-          `INSERT INTO resources (post_id, url, alt_text, created_at, public_id, resource_type)
-           VALUES ($1, $2, $3, NOW(), $4, $5)`,
-          [post.id, secure_url, null, public_id, resource_type],
-        );
-      }
-
-      if (content && post.content !== content) {
-        await tx.query(
-          `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
-          [content, id, userId],
-        );
       }
 
       return await this.postRepository.getPostById(id, tx);
