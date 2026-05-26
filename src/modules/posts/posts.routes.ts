@@ -12,7 +12,7 @@ const controller = new PostsController();
 router.post(
   "/",
   authMiddleware,
-  upload.array("images", 5),
+  upload.single("images"),
   validate(createPostSchema),
   wrapper(controller.createPost.bind(controller)),
 );
@@ -20,5 +20,12 @@ router.post(
 router.get("/", wrapper(controller.getAllPosts.bind(controller)));
 
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
+
+router.patch(
+  "/:id",
+  authMiddleware,
+  upload.single("images"),
+  wrapper(controller.updatePost.bind(controller)),
+);
 
 export default router;
