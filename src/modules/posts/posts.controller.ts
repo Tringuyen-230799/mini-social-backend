@@ -53,9 +53,19 @@ export class PostsController {
     }
 
     const postId = parseInt(req.params?.id as string);
-    const { content, oldImageIds } = req.body;
+    const { content, oldImageIds: imgIds } = req.body;
 
     const file = req.file as Express.Multer.File;
+
+    const oldImageIds = Array.isArray(imgIds)
+      ? req.body.oldImageIds
+      : req.body.oldImageIds?.split(",");
+
+    if (req.file && !oldImageIds?.length) {
+      throw new BadRequestException(
+        'Please Provide old image before update the new one',
+      );
+    }
 
     return await this.postsService.updatePost(
       {

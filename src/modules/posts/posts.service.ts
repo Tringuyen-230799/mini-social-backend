@@ -58,31 +58,7 @@ export class PostsService {
   }
 
   async getPostById(postId: number): Promise<Post> {
-    const result = await pool.query(
-      `
-      SELECT 
-        p.id,
-        p.content,
-        p.created_at,
-        p.updated_at,
-        json_agg(
-          json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
-        ) FILTER (WHERE r.id IS NOT NULL) as resources,
-        json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) as user
-      FROM posts p
-      LEFT JOIN resources r ON p.id = r.post_id
-      LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.id = $1
-      GROUP BY p.id, u.id
-    `,
-      [postId],
-    );
-
-    if (result.rows.length === 0) {
-      throw new BadRequestException("Post not found");
-    }
-
-    return result.rows[0];
+    return await this.postRepository.getPostById(postId);
   }
 
   async getAllPosts(
@@ -133,22 +109,21 @@ export class PostsService {
       }
 
       if (oldImageIds) {
-        const ids = oldImageIds.join(", ");
-
         const { rows: resources } = await tx.query<Resources>(
-          "SELECT * FROM resources WHERE post_id = $1 AND id IN ($2)",
-          [post.id, ids],
+          "SELECT * FROM resources WHERE post_id = $1 AND id = ANY($2)",
+          [post.id, oldImageIds],
         );
 
         if (!resources.length) {
           throw new BadRequestException("Resources not found");
         }
 
-        const resourceIds = resources.map((res) => res.id).join(", ");
+        const resourceIds = resources.map((res) => res.id);
         const publicIds = resources.map((res) => res.public_id);
 
         const deleteOldResources = await tx.query(
-          `DELETE FROM resources WHERE id IN (${resourceIds})`,
+          `DELETE FROM resources WHERE id = ANY($1)`,
+          [resourceIds],
         );
 
         await Promise.all([
@@ -168,14 +143,14 @@ export class PostsService {
         );
       }
 
-      if (post.content !== content) {
+      if (content && post.content !== content) {
         await tx.query(
           `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
           [content, id, userId],
         );
       }
 
-      return await this.getPostById(id);
+      return await this.postRepository.getPostById(id, tx);
     });
   }
 }
