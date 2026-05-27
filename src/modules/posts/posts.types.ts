@@ -8,7 +8,7 @@ export const updatePostSchema = z.object({
   content: z.string().min(1).max(255).optional(),
   userId: z.number(),
   oldImageIds: z.array(z.string()).optional(),
-  id: z.number()
+  id: z.number(),
 });
 
 export type CreatePostDto = z.infer<typeof createPostSchema>;
@@ -20,13 +20,10 @@ export interface Post {
   content: string;
   created_at: Date;
   updated_at: Date;
+  is_deleted: boolean;
+  delete_at: Date;
 }
-export interface Post {
-  id: number;
-  user_id: number;
-  content: string;
-  created_at: Date;
-  updated_at: Date;
+export interface PostRespone extends Post {
   resources: Array<{
     id: number;
     url: string;
@@ -41,7 +38,7 @@ export interface Post {
 
 export interface AllPostsResponse {
   totalCount: number;
-  content: Post[];
+  content: PostRespone[];
   page: number;
   totalPages: number;
 }

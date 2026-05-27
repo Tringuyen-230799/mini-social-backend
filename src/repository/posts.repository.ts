@@ -1,6 +1,7 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
 import { Post } from "~/modules/posts/posts.types";
+import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
 
 export class PostRepository {
@@ -13,17 +14,18 @@ export class PostRepository {
 
     const {
       rows: [post],
-    } = await db.query(`SELECT * FROM posts WHERE id = $1 AND user_id = $2`, [
-      id,
-      userId,
-    ]);
+    } = await db.query(
+      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 AND is_deleted IS NOT TRUE`,
+      [id, userId],
+    );
 
     return post;
   }
 
   async findPostById(postId: number, client?: PoolClient) {
     const db = client ?? pool;
-    const findPostQuery = "SELECT * FROM posts WHERE id = $1";
+    const findPostQuery =
+      "SELECT * FROM posts WHERE id = $1 AND is_deleted IS NOT TRUE";
 
     const {
       rows: [post],
@@ -49,7 +51,7 @@ export class PostRepository {
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.id = $1
+      WHERE p.id = $1 AND p.is_deleted IS NOT TRUE
       GROUP BY p.id, u.id
     `,
       [postId],
@@ -60,5 +62,67 @@ export class PostRepository {
     }
 
     return result.rows[0];
+  }
+
+  async softDeletePost(id: number, poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+    const deleteAt = new Date();
+    deleteAt.setDate(deleteAt.getDate() + TIME_DELETE_PERMANENT);
+
+    return await db.query(
+      `UPDATE posts
+       SET is_deleted = TRUE,
+       delete_at = $1
+       WHERE id = $2
+      `,
+      [deleteAt, id],
+    );
+  }
+
+  async restorePost(id: number, userId: number, poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+    const {
+      rows: [post],
+    } = await db.query(
+      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 AND is_deleted = TRUE`,
+      [id, userId],
+    );
+
+    if (!post) {
+      throw new BadRequestException("The post is not found");
+    }
+
+    const {
+      rows: [newPost],
+    } = await db.query(
+      `UPDATE posts SET is_deleted = null, delete_at = null WHERE id = $1`,
+      [id],
+    );
+
+    return newPost;
+  }
+
+  async findPostsToDelete(poolClient?: PoolClient): Promise<Post[]> {
+    const db = poolClient ?? pool;
+    const { rows: posts } = await db.query<Post>(
+      `
+      SELECT *,  
+      json_agg(
+        json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
+      ) FILTER (WHERE r.id IS NOT NULL) as resources
+      FROM posts p
+      LEFT JOIN resources r ON p.id = r.post_id
+      WHERE is_deleted = true 
+      AND delete_at <= NOW()
+      GROUP BY p.id, r.id
+      `,
+    );
+    return posts;
+  }
+
+  async deletePermanently(postIds: number[], poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+
+    return await db.query(`DELETE FROM posts WHERE id = ANY($1)`, [postIds]);
   }
 }

@@ -71,4 +71,27 @@ export class PostsController {
       file,
     );
   };
+
+  softDelete = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    await this.postsService.softDelete(postId, userId);
+
+    return "The post has been put into the trash";
+  };
+
+  restorePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    const post = await this.postsService.restorePost(postId, userId);
+
+    return post;
+  };
+
+  testCleanPost = async () => {
+    console.log('Test Clean');
+    return await this.postsService.cleanupDeletedPosts();
+  };
 }

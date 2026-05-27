@@ -83,6 +83,7 @@ export class PostsService {
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.is_deleted IS NOT TRUE
       GROUP BY p.id, u.id
       ORDER BY p.created_at DESC
       LIMIT $1 OFFSET $2
@@ -152,5 +153,23 @@ export class PostsService {
 
       return await this.postRepository.getPostById(id, tx);
     });
+  }
+
+  async softDelete(id: number, userId: number) {
+    const post = await this.postRepository.findPostByUser(id, userId);
+    if (!post) {
+      throw new BadRequestException("The post is not found");
+    }
+    return await this.postRepository.softDeletePost(post.id);
+  }
+
+  async restorePost(id: number, userId: number) {
+    return await this.postRepository.restorePost(id, userId);
+  }
+
+  async cleanupDeletedPosts() {
+    const posts = await this.postRepository.findPostsToDelete();
+
+    return posts;
   }
 }

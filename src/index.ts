@@ -4,10 +4,12 @@ import { router } from "./routes";
 import "dotenv/config";
 import pool from "./config/database";
 import cors from "cors";
+import cron from "./config/cron";
 
 function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
+  const cronJob = cron;
   app.use(
     cors({
       origin: process.env.ORIGIN || "http://localhost:3000",
@@ -16,14 +18,11 @@ function startServer() {
   );
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
-
   app.use("/uploads", express.static("uploads"));
-
   app.get("/health-check", (req, res) => {
     console.log("Health check endpoint hit");
     res.send("Health check");
   });
-
   app.use(router);
 
   app.listen(PORT, () => {
