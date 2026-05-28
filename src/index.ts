@@ -4,6 +4,7 @@ import { router } from "./routes";
 import "dotenv/config";
 import pool from "./config/database";
 import cors from "cors";
+import cron from "./config/cron";
 
 function startServer() {
   const app = express();
@@ -16,15 +17,15 @@ function startServer() {
   );
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
-
   app.use("/uploads", express.static("uploads"));
-
   app.get("/health-check", (req, res) => {
     console.log("Health check endpoint hit");
     res.send("Health check");
   });
-
   app.use(router);
+
+  const cronJob = cron;
+  cronJob.scheduleDeletePostTask();
 
   app.listen(PORT, () => {
     console.log("Server is running on port ", PORT);

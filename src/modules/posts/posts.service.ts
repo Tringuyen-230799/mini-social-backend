@@ -3,6 +3,7 @@ import {
   AllPostsResponse,
   CreatePostDto,
   Post,
+  Resource,
   UpdatePostDto,
 } from "./posts.types";
 import { BadRequestException } from "~/shared/utils/error-exception";
@@ -10,13 +11,17 @@ import { withTransaction } from "~/shared/utils/transaction";
 import cloudiary, { CloudiaryService } from "~/config/cloudiary";
 import { PostRepository } from "~/repository/posts.repository";
 import { Resources } from "~/shared/types/resources";
+import { ResourcesRepository } from "~/repository/resources.repository";
+import { error } from "console";
 
 export class PostsService {
   private cloudinaryServices: CloudiaryService;
   private postRepository: PostRepository;
+  private resourcesRepository: ResourcesRepository;
   constructor() {
     this.cloudinaryServices = cloudiary;
     this.postRepository = new PostRepository();
+    this.resourcesRepository = new ResourcesRepository();
   }
 
   async createPost(
@@ -83,6 +88,7 @@ export class PostsService {
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
+      WHERE p.is_deleted IS NOT TRUE
       GROUP BY p.id, u.id
       ORDER BY p.created_at DESC
       LIMIT $1 OFFSET $2
@@ -151,6 +157,86 @@ export class PostsService {
       }
 
       return await this.postRepository.getPostById(id, tx);
+    });
+  }
+
+  async softDelete(id: number, userId: number) {
+    const post = await this.postRepository.findPostByUser(id, userId);
+    if (!post) {
+      throw new BadRequestException("The post is not found");
+    }
+    return await this.postRepository.softDeletePost(post.id);
+  }
+
+  async restorePost(id: number, userId: number) {
+    return await this.postRepository.restorePost(id, userId);
+  }
+
+  async cleanupDeletedPosts(): Promise<number | null> {
+    const posts = await this.postRepository.findPostsToDelete();
+    if (!posts.length) {
+      return null;
+    }
+    const resources = posts
+      .flatMap((post) => post.resources)
+      .filter((res) => res !== null) as Resource[];
+
+    const postIds = posts.map((post) => post.id);
+    try {
+      const numOfPostDelete = await withTransaction(async (tx) => {
+        if (resources.length > 0) {
+          const resourceIds = resources.map((res) => res.id);
+          await this.resourcesRepository.deleteResources(resourceIds);
+        }
+        return await this.postRepository.deletePermanently(postIds, tx);
+      });
+
+      if (resources.length > 0) {
+        const cloudDeletions = resources
+          .filter((res) => res.public_id)
+          .map((res) =>
+            this.cloudinaryServices.deleteFile(res.public_id!).catch((err) => {
+              console.error(
+                `Failed to delete Cloudinary image ${res.public_id}:`,
+                err,
+              );
+              return null;
+            }),
+          );
+
+        await Promise.all(cloudDeletions);
+      }
+
+      return numOfPostDelete;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
+
+  async deletePost(id: number, userId: number) {
+    return withTransaction(async (tx) => {
+      const post = await this.postRepository.findPostByUser(id, userId, tx);
+
+      if (!post) {
+        throw new BadRequestException("Post Not Found");
+      }
+
+      const resource = await this.resourcesRepository.findResourceByPost(
+        post.id,
+      );
+
+      if (resource) {
+        await this.resourcesRepository.deleteResource(resource.id, tx);
+      }
+
+      const postCount = await this.postRepository.hardDelete(post.id, tx);
+
+      if (resource.public_id) {
+        await this.cloudinaryServices.deleteFile(resource.public_id);
+      }
+
+      return postCount;
     });
   }
 }

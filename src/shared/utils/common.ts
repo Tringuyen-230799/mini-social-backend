@@ -1,3 +1,5 @@
+import { Resource } from "~/modules/posts/posts.types";
+
 export const decodeBase64 = (cursor?: string): any => {
   if (!cursor?.length) return null;
   const decoded = Buffer.from(cursor, "base64").toString("utf-8");
@@ -7,8 +9,3 @@ export const decodeBase64 = (cursor?: string): any => {
 export const encodeBase64 = (payload: unknown): string => {
   return Buffer.from(JSON.stringify(payload)).toString("base64");
 };
-
-
-export const buildTree = () => {
-  
-}

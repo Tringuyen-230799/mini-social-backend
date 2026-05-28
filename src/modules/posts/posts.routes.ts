@@ -21,11 +21,29 @@ router.get("/", wrapper(controller.getAllPosts.bind(controller)));
 
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
 
+router.delete(
+  "/:id",
+  authMiddleware,
+  wrapper(controller.hardDeletePost.bind(controller)),
+);
+
 router.patch(
   "/:id",
   authMiddleware,
   upload.single("images"),
   wrapper(controller.updatePost.bind(controller)),
+);
+
+router.delete(
+  "/trash/:id",
+  authMiddleware,
+  wrapper(controller.softDelete.bind(controller)),
+);
+
+router.post(
+  "/restore/:id",
+  authMiddleware,
+  wrapper(controller.restorePost.bind(controller)),
 );
 
 export default router;

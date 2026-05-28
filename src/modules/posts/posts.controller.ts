@@ -1,7 +1,6 @@
 import { Request } from "express";
 import { PostsService } from "./posts.service";
 import { BadRequestException } from "~/shared/utils/error-exception";
-import cloudiary from "~/config/cloudiary";
 
 export class PostsController {
   private postsService: PostsService;
@@ -33,6 +32,11 @@ export class PostsController {
 
   getPost = async (req: Request) => {
     const postId = parseInt(req.params?.id as string);
+
+    if (!postId || isNaN(postId)) {
+      throw new BadRequestException("Required Id");
+    }
+
     const post = await this.postsService.getPostById(postId);
 
     return post;
@@ -70,5 +74,36 @@ export class PostsController {
       },
       file,
     );
+  };
+
+  softDelete = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    if(!postId || !userId) {
+      throw new BadRequestException('Post not found')
+    }
+
+    await this.postsService.softDelete(postId, userId);
+
+    return "The post has been put into the trash";
+  };
+
+  restorePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    const post = await this.postsService.restorePost(postId, userId);
+
+    return post;
+  };
+
+  hardDeletePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    await this.postsService.deletePost(postId, userId);
+
+    return "Delete Post success";
   };
 }
