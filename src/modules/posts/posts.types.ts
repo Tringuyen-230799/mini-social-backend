@@ -24,11 +24,7 @@ export interface Post {
   delete_at: Date;
 }
 export interface PostRespone extends Post {
-  resources: Array<{
-    id: number;
-    url: string;
-    alt_text: string | null;
-  }>;
+  resources: Resource[];
   user: {
     id: number;
     username: string;
@@ -41,4 +37,15 @@ export interface AllPostsResponse {
   content: PostRespone[];
   page: number;
   totalPages: number;
+}
+
+export interface DeletePostDto extends Post {
+  resources?: Resource[];
+}
+
+export interface Resource {
+  id: number;
+  url: string;
+  alt_text: string | null;
+  public_id?: string;
 }

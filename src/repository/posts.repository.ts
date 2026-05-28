@@ -1,31 +1,41 @@
-import { PoolClient } from "pg";
+import { Pool, PoolClient } from "pg";
 import pool from "~/config/database";
-import { Post } from "~/modules/posts/posts.types";
+import { DeletePostDto, Post } from "~/modules/posts/posts.types";
 import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
+import { ResourcesRepository } from "./resources.repository";
 
 export class PostRepository {
   async findPostByUser(
     id: string | number,
     userId: string | number,
-    poolClient?: PoolClient,
+    poolClient?: PoolClient | Pool,
+    isDeleted?: boolean,
   ): Promise<Post> {
     const db = poolClient ?? pool;
+
+    const deleteClause = isDeleted && `AND is_deleted = true`;
 
     const {
       rows: [post],
     } = await db.query(
-      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 AND is_deleted IS NOT TRUE`,
+      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 ${deleteClause ? deleteClause : ""}`,
       [id, userId],
     );
 
     return post;
   }
 
-  async findPostById(postId: number, client?: PoolClient) {
-    const db = client ?? pool;
-    const findPostQuery =
-      "SELECT * FROM posts WHERE id = $1 AND is_deleted IS NOT TRUE";
+  async findPostById(
+    postId: number,
+    poolClient?: PoolClient | Pool,
+    isDeleted?: boolean,
+  ) {
+    const db = poolClient ?? pool;
+
+    const deleteClause = isDeleted && `AND is_deleted = true`;
+
+    const findPostQuery = `SELECT * FROM posts WHERE id = $1 ${deleteClause}`;
 
     const {
       rows: [post],
@@ -102,19 +112,19 @@ export class PostRepository {
     return newPost;
   }
 
-  async findPostsToDelete(poolClient?: PoolClient): Promise<Post[]> {
+  async findPostsToDelete(poolClient?: PoolClient): Promise<DeletePostDto[]> {
     const db = poolClient ?? pool;
-    const { rows: posts } = await db.query<Post>(
+    const { rows: posts } = await db.query<DeletePostDto>(
       `
-      SELECT *,  
+      SELECT p.id, p.user_id, p.content, p.created_at, p.updated_at, p.is_deleted, p.delete_at,
       json_agg(
-        json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
+        json_build_object('id', r.id, 'url', r.url, 'public_id', r.public_id, 'alt_text', r.alt_text, 'type', r.resource_type)
       ) FILTER (WHERE r.id IS NOT NULL) as resources
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
-      WHERE is_deleted = true 
-      AND delete_at <= NOW()
-      GROUP BY p.id, r.id
+      WHERE p.is_deleted = true 
+      AND p.delete_at <= NOW()
+      GROUP BY p.id
       `,
     );
     return posts;
@@ -123,6 +133,21 @@ export class PostRepository {
   async deletePermanently(postIds: number[], poolClient?: PoolClient) {
     const db = poolClient ?? pool;
 
-    return await db.query(`DELETE FROM posts WHERE id = ANY($1)`, [postIds]);
+    const { rowCount } = await db.query(
+      `DELETE FROM posts WHERE id = ANY($1)`,
+      [postIds],
+    );
+
+    return rowCount;
+  }
+
+  async hardDelete(id: number, poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+
+    const { rowCount } = await db.query(`DELETE FROM posts WHERE id = $1`, [
+      id,
+    ]);
+
+    return rowCount;
   }
 }

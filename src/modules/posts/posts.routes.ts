@@ -19,9 +19,13 @@ router.post(
 
 router.get("/", wrapper(controller.getAllPosts.bind(controller)));
 
-router.get("/test", wrapper(controller.testCleanPost.bind(controller)));
-
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  wrapper(controller.hardDeletePost.bind(controller)),
+);
 
 router.patch(
   "/:id",

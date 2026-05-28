@@ -14,7 +14,8 @@
     "prettier:fix": "prettier --write .",
     "migrate": "tsx src/scripts/migrate.ts",
     "migrate:create": "tsx src/scripts/create-migration.ts",
-    "migrate:reset": "tsx src/scripts/reset-migration.ts"
+    "migrate:reset": "tsx src/scripts/reset-migration.ts",
+    "seed:deleted-posts": "tsx src/seeds/seed-deleted-posts.ts"
   },
   "repository": {
     "type": "git",

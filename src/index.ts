@@ -9,7 +9,6 @@ import cron from "./config/cron";
 function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
-  const cronJob = cron;
   app.use(
     cors({
       origin: process.env.ORIGIN || "http://localhost:3000",
@@ -24,6 +23,9 @@ function startServer() {
     res.send("Health check");
   });
   app.use(router);
+
+  const cronJob = cron;
+  cronJob.scheduleDeletePostTask();
 
   app.listen(PORT, () => {
     console.log("Server is running on port ", PORT);
