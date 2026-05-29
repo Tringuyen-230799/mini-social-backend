@@ -1,16 +1,9 @@
 import pool from "~/config/database";
 
-/**
- * Seed script to create test posts with is_deleted = true
- * and delete_at timestamp in the past for testing cleanup functionality
- */
 async function seedDeletedPosts() {
   const client = await pool.connect();
 
   try {
-    console.log("Starting seed: Creating deleted posts for testing...");
-
-    // Check if we have users in the database
     const { rows: users } = await client.query("SELECT id FROM users LIMIT 1");
 
     if (users.length === 0) {
@@ -23,7 +16,6 @@ async function seedDeletedPosts() {
     const userId = users[0].id;
     console.log(`Using user ID: ${userId}`);
 
-    // Create posts with different deletion dates for testing
     const postsData = [
       {
         content: "Post deleted 35 days ago - should be cleaned up",
@@ -60,7 +52,6 @@ async function seedDeletedPosts() {
     let insertedCount = 0;
 
     for (const postData of postsData) {
-      // Calculate delete_at date (in the past)
       const deleteAt = new Date();
       deleteAt.setDate(deleteAt.getDate() - postData.daysAgo);
 
@@ -73,7 +64,6 @@ async function seedDeletedPosts() {
 
       const postId = rows[0].id;
 
-      // Add resources if needed
       if (postData.hasResource) {
         await client.query(
           `INSERT INTO resources (post_id, url, alt_text, public_id, resource_type, created_at)
@@ -86,23 +76,12 @@ async function seedDeletedPosts() {
             "image",
           ],
         );
-        console.log(
-          `✅ Created post ${postId}: "${postData.content.substring(0, 30)}..." with resource | delete_at: ${deleteAt.toISOString()}`,
-        );
-      } else {
-        console.log(
-          `✅ Created post ${postId}: "${postData.content.substring(0, 30)}..." (no resource) | delete_at: ${deleteAt.toISOString()}`,
-        );
       }
 
       insertedCount++;
     }
 
     console.log(`\n✅ Successfully seeded ${insertedCount} deleted posts!`);
-    console.log(`\nTo test cleanup:`);
-    console.log(`1. Posts with delete_at older than 30 days should be deleted`);
-    console.log(`2. Posts with delete_at within 30 days should remain`);
-    console.log(`\nRun your cleanup job to test!`);
   } catch (error) {
     console.error("❌ Seed failed:", error);
     throw error;

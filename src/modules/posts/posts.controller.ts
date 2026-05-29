@@ -80,8 +80,8 @@ export class PostsController {
     const postId = Number(req.params.id);
     const userId = Number(req.user?.id);
 
-    if(!postId || !userId) {
-      throw new BadRequestException('Post not found')
+    if (!postId || !userId) {
+      throw new BadRequestException("Post not found");
     }
 
     await this.postsService.softDelete(postId, userId);
@@ -106,4 +106,12 @@ export class PostsController {
 
     return "Delete Post success";
   };
+
+  likePost = async (req: Request) => {
+    
+  }
+
+  unLikePost = async (req: Request) => {
+
+  }
 }

@@ -48,7 +48,7 @@ export const authMiddleware = async (
 
     req.user = {
       id: user?.id,
-      username: user.username,
+      username: user.first_name + " " +user.last_name,
       email: user.email,
       avatar_url: user.avatar_url || undefined,
     };

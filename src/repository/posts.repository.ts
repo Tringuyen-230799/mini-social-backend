@@ -3,7 +3,6 @@ import pool from "~/config/database";
 import { DeletePostDto, Post } from "~/modules/posts/posts.types";
 import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
-import { ResourcesRepository } from "./resources.repository";
 
 export class PostRepository {
   async findPostByUser(

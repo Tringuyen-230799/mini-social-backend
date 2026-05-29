@@ -46,4 +46,16 @@ router.post(
   wrapper(controller.restorePost.bind(controller)),
 );
 
+router.post(
+  "/like/:id",
+  authMiddleware,
+  wrapper(controller.likePost.bind(controller)),
+);
+
+router.post(
+  "/unlike/:id",
+  authMiddleware,
+  wrapper(controller.unLikePost.bind(controller)),
+);
+
 export default router;

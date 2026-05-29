@@ -1,0 +1,2 @@
+ALTER TABLE posts 
+  ADD COLUMN total_likes INT DEFAULT 0

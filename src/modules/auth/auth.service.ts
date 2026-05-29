@@ -6,25 +6,24 @@ import { BadRequestException } from "~/shared/utils/error-exception";
 
 export class AuthService {
   async signup(data: SignupDto): Promise<AuthResponse> {
-    const { username, email, password } = data;
+    const { firstName, lastName, email, password } = data;
 
     const existingUser = await pool.query(
-      "SELECT id FROM users WHERE email = $1 OR username = $2",
-      [email, username],
+      "SELECT id FROM users WHERE email = $1",
+      [email],
     );
 
     if (existingUser.rows.length > 0) {
-      throw new Error("User with this email or username already exists");
+      throw new BadRequestException("User is already exists");
     }
 
     const hash = await hashedPassword(password);
 
-    // Create user
     const result = await pool.query<User>(
-      `INSERT INTO users (username, email, password) 
-       VALUES ($1, $2, $3) 
-       RETURNING id, username, email, avatar_url`,
-      [username, email, hash],
+      `INSERT INTO users (first_name, last_name, email, password) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, first_name, last_name, email, avatar_url`,
+      [firstName, lastName, email, hash],
     );
 
     const user = result.rows[0];
@@ -37,7 +36,7 @@ export class AuthService {
     return {
       user: {
         id: user.id,
-        username: user.username,
+        username: user.first_name + " " + user.last_name,
         email: user.email,
         avatar_url: user.avatar_url,
       },
@@ -48,16 +47,13 @@ export class AuthService {
   async login(data: LoginDto): Promise<AuthResponse> {
     const { email, password } = data;
 
-    const result = await pool.query<User>(
-      "SELECT id, username, email, password, avatar_url FROM users WHERE email = $1",
-      [email],
-    );
+    const {
+      rows: [user],
+    } = await pool.query<User>("SELECT * FROM users WHERE email = $1", [email]);
 
-    if (result.rows.length === 0) {
+    if (!user) {
       throw new BadRequestException("Invalid email or password");
     }
-
-    const user = result.rows[0];
 
     const isValid = await isPasswordValid(password, user.password);
 
@@ -65,7 +61,6 @@ export class AuthService {
       throw new BadRequestException("Invalid email or password");
     }
 
-    // Generate JWT token
     const token = generateToken({
       userId: user.id,
       email: user.email,
@@ -74,7 +69,7 @@ export class AuthService {
     return {
       user: {
         id: user.id,
-        username: user.username,
+        username: user.first_name + " " + user.last_name,
         email: user.email,
         avatar_url: user.avatar_url,
       },
@@ -83,11 +78,10 @@ export class AuthService {
   }
 
   async getUserById(userId: number): Promise<User | null> {
-    const result = await pool.query<User>(
-      "SELECT id, username, email, avatar_url, created_at, updated_at FROM users WHERE id = $1",
-      [userId],
-    );
+    const {
+      rows: [user],
+    } = await pool.query<User>("SELECT * FROM users WHERE id = $1", [userId]);
 
-    return result.rows[0] || null;
+    return user || null;
   }
 }

@@ -125,7 +125,7 @@ export class PostsService {
         );
       }
 
-      if (content && post.content !== content) {
+      if (content !== undefined && post.content !== content) {
         await tx.query(
           `UPDATE posts SET content = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
           [content, id, userId],
@@ -138,7 +138,7 @@ export class PostsService {
           [post.id, oldImageIds],
         );
 
-        if (!resources.length) {
+        if (!resources?.length) {
           throw new BadRequestException("Resources not found");
         }
 
@@ -232,7 +232,7 @@ export class PostsService {
 
       const postCount = await this.postRepository.hardDelete(post.id, tx);
 
-      if (resource.public_id) {
+      if (resource?.public_id) {
         await this.cloudinaryServices.deleteFile(resource.public_id);
       }
 
