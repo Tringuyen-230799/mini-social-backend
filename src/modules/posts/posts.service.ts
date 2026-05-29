@@ -84,7 +84,7 @@ export class PostsService {
         json_agg(
           json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
         ) FILTER (WHERE r.id IS NOT NULL) as resources,
-        json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) as user
+        json_build_object('id', u.id, 'username', u.last_name + " " + u.first_name, 'avatar_url', u.avatar_url) as user
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id

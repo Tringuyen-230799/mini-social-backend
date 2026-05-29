@@ -1,94 +1,54 @@
-import pool from "~/config/database";
+import { faker } from "@faker-js/faker";
+import { PoolClient } from "pg";
+import { User } from "~/modules/auth/auth.types";
+import { Post } from "~/modules/posts/posts.types";
 
-async function seedDeletedPosts() {
-  const client = await pool.connect();
-
+async function seedPosts(numOfRecord: number = 100, client: PoolClient) {
   try {
-    const { rows: users } = await client.query("SELECT id FROM users LIMIT 1");
+    const { rows: users } = await client.query<User>(
+      "SELECT id FROM users LIMIT 25",
+    );
 
-    if (users.length === 0) {
-      console.error(
-        "❌ No users found in database. Please create a user first.",
-      );
+    if (!users.length) {
+      console.error("No users found in database. Please create a user first.");
       return;
     }
 
-    const userId = users[0].id;
-    console.log(`Using user ID: ${userId}`);
+    const userIds = users.map((u) => u.id);
 
-    const postsData = [
-      {
-        content: "Post deleted 35 days ago - should be cleaned up",
-        daysAgo: 35,
-        hasResource: true,
-      },
-      {
-        content: "Post deleted 31 days ago - should be cleaned up",
-        daysAgo: 31,
-        hasResource: true,
-      },
-      {
-        content: "Post deleted 30 days ago - right at threshold",
-        daysAgo: 30,
-        hasResource: false,
-      },
-      {
-        content: "Post deleted 25 days ago - not old enough yet",
-        daysAgo: 25,
-        hasResource: true,
-      },
-      {
-        content: "Post deleted 10 days ago - recent, should stay",
-        daysAgo: 10,
-        hasResource: false,
-      },
-      {
-        content: "Post deleted 1 day ago - very recent",
-        daysAgo: 1,
-        hasResource: true,
-      },
-    ];
+    for (let i = 0; i < numOfRecord; i++) {
+      const index = Math.ceil(Math.random() * (userIds.length - 1));
+      const userId = userIds[index];
 
-    let insertedCount = 0;
+      const content = faker.lorem.text();
+      const hasResource = i % 2 == 0;
 
-    for (const postData of postsData) {
-      const deleteAt = new Date();
-      deleteAt.setDate(deleteAt.getDate() - postData.daysAgo);
-
-      const { rows } = await client.query(
-        `INSERT INTO posts (user_id, content, is_deleted, delete_at, created_at, updated_at)
-         VALUES ($1, $2, true, $3, NOW(), NOW())
-         RETURNING id, content, delete_at`,
-        [userId, postData.content, deleteAt],
+      const {
+        rows: [post],
+      } = await client.query<Post>(
+        `INSERT INTO posts (user_id, content) VALUES ($1, $2) RETURNING *`,
+        [userId, content],
       );
 
-      const postId = rows[0].id;
-
-      if (postData.hasResource) {
+      if (hasResource) {
         await client.query(
           `INSERT INTO resources (post_id, url, alt_text, public_id, resource_type, created_at)
            VALUES ($1, $2, $3, $4, $5, NOW())`,
           [
-            postId,
-            `https://res.cloudinary.com/demo/image/upload/sample_${postId}.jpg`,
+            post.id,
+            `https://res.cloudinary.com/cld-docs/image/upload/v1719307544/gotjephlnz2jgiu20zni.jpg`,
             "Test image",
-            `test_image_${postId}`,
+            "",
             "image",
           ],
         );
       }
-
-      insertedCount++;
     }
-
-    console.log(`\n✅ Successfully seeded ${insertedCount} deleted posts!`);
+    console.log(`✅ Successfully seeded ${numOfRecord} posts`);
   } catch (error) {
-    console.error("❌ Seed failed:", error);
-    throw error;
-  } finally {
-    client.release();
-    await pool.end();
+    console.error("Seed failed:", error);
+    return error as Error;
   }
 }
 
-seedDeletedPosts();
+export default seedPosts;
