@@ -12,16 +12,21 @@ import cloudiary, { CloudiaryService } from "~/config/cloudiary";
 import { PostRepository } from "~/repository/posts.repository";
 import { Resources } from "~/shared/types/resources";
 import { ResourcesRepository } from "~/repository/resources.repository";
-import { error } from "console";
+import PostLikesRepository from "~/repository/postLikes.repository";
+import { UserRepository } from "~/repository/user.repository";
 
 export class PostsService {
   private cloudinaryServices: CloudiaryService;
   private postRepository: PostRepository;
   private resourcesRepository: ResourcesRepository;
+  private postLikesRepository: PostLikesRepository;
+  private userRepository: UserRepository;
   constructor() {
     this.cloudinaryServices = cloudiary;
     this.postRepository = new PostRepository();
     this.resourcesRepository = new ResourcesRepository();
+    this.postLikesRepository = new PostLikesRepository();
+    this.userRepository = new UserRepository();
   }
 
   async createPost(
@@ -69,12 +74,13 @@ export class PostsService {
   async getAllPosts(
     limit: number = 20,
     page: number,
+    userId?: number,
   ): Promise<AllPostsResponse> {
     const offset = ((page || 1) - 1) * limit;
 
     const totalCount = await pool.query(`SELECT COUNT(*) FROM posts`);
 
-    const result = await pool.query(
+    const { rows: posts } = await pool.query(
       `
       SELECT 
         p.id,
@@ -84,13 +90,13 @@ export class PostsService {
         json_agg(
           json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
         ) FILTER (WHERE r.id IS NOT NULL) as resources,
-        json_build_object('id', u.id, 'username', u.last_name + " " + u.first_name, 'avatar_url', u.avatar_url) as user
+        json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar_url', u.avatar_url) as user
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.is_deleted IS NOT TRUE
+      WHERE p.is_deleted = false
       GROUP BY p.id, u.id
-      ORDER BY p.created_at DESC
+      ORDER BY p.created_at DESC, p.id DESC
       LIMIT $1 OFFSET $2
     `,
       [limit, offset],
@@ -98,7 +104,7 @@ export class PostsService {
 
     return {
       totalCount: parseInt(totalCount.rows[0].count, 10),
-      content: result.rows,
+      content: posts,
       page: page || 1,
       totalPages: Math.ceil(totalCount.rows[0].count / limit),
     };
@@ -163,8 +169,13 @@ export class PostsService {
   async softDelete(id: number, userId: number) {
     const post = await this.postRepository.findPostByUser(id, userId);
     if (!post) {
-      throw new BadRequestException("The post is not found");
+      throw new BadRequestException("User is not the owner of the post");
     }
+
+    if (post.is_deleted) {
+      throw new BadRequestException("The post have been move to the trash");
+    }
+
     return await this.postRepository.softDeletePost(post.id);
   }
 
@@ -237,6 +248,60 @@ export class PostsService {
       }
 
       return postCount;
+    });
+  }
+
+  async likePost(postId: number, userId: number) {
+    return withTransaction(async (tx) => {
+      const post = await this.postRepository.findPostById(postId, tx);
+
+      if (!post) {
+        throw new BadRequestException("Post not found");
+      }
+
+      if (post.is_deleted) {
+        throw new BadRequestException("The post has been move to the trash");
+      }
+
+      const isUserLikedPost = await this.postLikesRepository.findUserLikePost(
+        userId,
+        post.id,
+        tx,
+      );
+
+      if (isUserLikedPost) {
+        throw new BadRequestException("You have liked this post");
+      }
+
+      await this.postRepository.increasePostLike(post.id, tx);
+
+      await this.postLikesRepository.create(post.id, userId, tx);
+    });
+  }
+
+  async unlikePost(postId: number, userId: number) {
+    return withTransaction(async (tx) => {
+      const post = await this.postRepository.findPostById(postId, tx);
+
+      if (!post) {
+        throw new BadRequestException("Post not found");
+      }
+
+      if (post.is_deleted) {
+        throw new BadRequestException("The post has been move to the trash");
+      }
+
+      const postLike = await this.postLikesRepository.findUserLikePost(
+        userId,
+        post.id,
+      );
+
+      if (!postLike) {
+        throw new BadRequestException("You have not like this post yet");
+      }
+
+      await this.postRepository.decreasePostLike(post.id, tx);
+      await this.postLikesRepository.remove(postLike.id, tx);
     });
   }
 }

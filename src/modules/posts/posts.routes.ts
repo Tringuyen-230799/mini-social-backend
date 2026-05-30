@@ -17,7 +17,11 @@ router.post(
   wrapper(controller.createPost.bind(controller)),
 );
 
-router.get("/", wrapper(controller.getAllPosts.bind(controller)));
+router.get(
+  "/",
+  authMiddleware,
+  wrapper(controller.getAllPosts.bind(controller)),
+);
 
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
 

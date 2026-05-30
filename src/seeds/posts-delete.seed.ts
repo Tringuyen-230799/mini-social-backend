@@ -81,9 +81,9 @@ async function seedDeletedPosts(client: PoolClient) {
       insertedCount++;
     }
 
-    console.log(`\n✅ Successfully seeded ${insertedCount} deleted posts!`);
+    console.log(`Successfully seeded ${insertedCount} deleted posts!`);
   } catch (error) {
-    console.error("❌ Seed failed:", error);
+    console.error("Seed failed:", error);
     return error as Error;
   }
 }
