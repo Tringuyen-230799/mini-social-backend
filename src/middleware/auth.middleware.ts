@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { User } from "~/modules/auth/auth.types";
 import { UserRepository } from "~/repository/user.repository";
 import { verifyToken } from "~/shared/utils/jwt";
+import { handleExcludeRoute } from "./helpers/excludeRoute";
 
 export const authMiddleware = async (
   req: Request,
@@ -12,6 +13,14 @@ export const authMiddleware = async (
     const userServices = new UserRepository();
     const authHeader = req.headers.authorization;
 
+    const path = req.path;
+    const method = req.method;
+
+    if (handleExcludeRoute(path, method) && !authHeader) {
+      next();
+      return;
+    }
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       res.status(401).json({
         message: "No token provided",
@@ -20,15 +29,6 @@ export const authMiddleware = async (
     }
 
     const token = authHeader.substring(7);
-
-    if (token === process.env.TEST_TOKEN) {
-      req.user = {
-        id: Number(process.env.userTestId),
-      };
-      next();
-      return;
-    }
-
     const decoded = verifyToken(token);
 
     if (!decoded) {
@@ -48,7 +48,7 @@ export const authMiddleware = async (
 
     req.user = {
       id: user?.id,
-      username: user.username,
+      username: user.first_name + " " + user.last_name,
       email: user.email,
       avatar_url: user.avatar_url || undefined,
     };

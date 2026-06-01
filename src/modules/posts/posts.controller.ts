@@ -45,8 +45,9 @@ export class PostsController {
   getAllPosts = async (req: Request) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const page = parseInt(req.query.page as string) || 1;
+    const userId = req.user?.id;
 
-    const result = await this.postsService.getAllPosts(limit, page);
+    const result = await this.postsService.getAllPosts(limit, page, userId);
 
     return result;
   };
@@ -80,13 +81,11 @@ export class PostsController {
     const postId = Number(req.params.id);
     const userId = Number(req.user?.id);
 
-    if(!postId || !userId) {
-      throw new BadRequestException('Post not found')
+    if (!postId || !userId) {
+      throw new BadRequestException("Post not found");
     }
 
-    await this.postsService.softDelete(postId, userId);
-
-    return "The post has been put into the trash";
+    return await this.postsService.softDelete(postId, userId);
   };
 
   restorePost = async (req: Request) => {
@@ -105,5 +104,23 @@ export class PostsController {
     await this.postsService.deletePost(postId, userId);
 
     return "Delete Post success";
+  };
+
+  likePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    const post = await this.postsService.likePost(postId, userId);
+
+    return post;
+  };
+
+  unLikePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    const post = await this.postsService.unlikePost(postId, userId);
+
+    return post;
   };
 }

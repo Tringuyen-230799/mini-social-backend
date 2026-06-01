@@ -68,6 +68,10 @@ export class CommentServices {
         throw new NotFoundException("No Post Found");
       }
 
+      if (post.is_deleted) {
+        throw new NotFoundException("The post has been moved to the trash");
+      }
+
       if (parentId) {
         const parentComments =
           await this.commentRepository.getParentCommentsByPost(

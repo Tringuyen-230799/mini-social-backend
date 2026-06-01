@@ -3,23 +3,22 @@ import pool from "~/config/database";
 import { DeletePostDto, Post } from "~/modules/posts/posts.types";
 import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
-import { ResourcesRepository } from "./resources.repository";
 
 export class PostRepository {
   async findPostByUser(
     id: string | number,
     userId: string | number,
     poolClient?: PoolClient | Pool,
-    isDeleted?: boolean,
   ): Promise<Post> {
     const db = poolClient ?? pool;
 
-    const deleteClause = isDeleted && `AND is_deleted = true`;
-
     const {
       rows: [post],
-    } = await db.query(
-      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 ${deleteClause ? deleteClause : ""}`,
+    } = await db.query<Post>(
+      `SELECT * 
+       FROM posts p
+       WHERE p.id = $1
+       AND p.user_id = $2`,
       [id, userId],
     );
 
@@ -29,17 +28,14 @@ export class PostRepository {
   async findPostById(
     postId: number,
     poolClient?: PoolClient | Pool,
-    isDeleted?: boolean,
-  ) {
+  ): Promise<Post> {
     const db = poolClient ?? pool;
 
-    const deleteClause = isDeleted && `AND is_deleted = true`;
-
-    const findPostQuery = `SELECT * FROM posts WHERE id = $1 ${deleteClause}`;
+    const findPostQuery = `SELECT * FROM posts WHERE id = $1`;
 
     const {
       rows: [post],
-    } = await db.query(findPostQuery, [postId]);
+    } = await db.query<Post>(findPostQuery, [postId])
 
     return post;
   }
@@ -54,14 +50,15 @@ export class PostRepository {
         p.content,
         p.created_at,
         p.updated_at,
+        p.total_likes,
         json_agg(
           json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
         ) FILTER (WHERE r.id IS NOT NULL) as resources,
-        json_build_object('id', u.id, 'username', u.username, 'avatar_url', u.avatar_url) as user
+        json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar_url', u.avatar_url) as user
       FROM posts p
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE p.id = $1 AND p.is_deleted IS NOT TRUE
+      WHERE p.id = $1 AND p.is_deleted = false
       GROUP BY p.id, u.id
     `,
       [postId],
@@ -79,14 +76,16 @@ export class PostRepository {
     const deleteAt = new Date();
     deleteAt.setDate(deleteAt.getDate() + TIME_DELETE_PERMANENT);
 
-    return await db.query(
+    const { rowCount } = await db.query(
       `UPDATE posts
-       SET is_deleted = TRUE,
+       SET is_deleted = true,
        delete_at = $1
        WHERE id = $2
       `,
       [deleteAt, id],
     );
+
+    return rowCount;
   }
 
   async restorePost(id: number, userId: number, poolClient?: PoolClient) {
@@ -94,7 +93,7 @@ export class PostRepository {
     const {
       rows: [post],
     } = await db.query(
-      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 AND is_deleted = TRUE`,
+      `SELECT * FROM posts WHERE id = $1 AND user_id = $2 AND is_deleted = true`,
       [id, userId],
     );
 
@@ -105,7 +104,7 @@ export class PostRepository {
     const {
       rows: [newPost],
     } = await db.query(
-      `UPDATE posts SET is_deleted = null, delete_at = null WHERE id = $1`,
+      `UPDATE posts SET is_deleted = false, delete_at = null WHERE id = $1`,
       [id],
     );
 
@@ -149,5 +148,27 @@ export class PostRepository {
     ]);
 
     return rowCount;
+  }
+
+  async increasePostLike(postId: number, poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+
+    const result = await db.query(
+      "UPDATE posts SET total_likes = total_likes + 1 WHERE id = $1 RETURNING *",
+      [postId],
+    );
+
+    return result;
+  }
+
+  async decreasePostLike(postId: number, poolClient?: PoolClient) {
+    const db = poolClient ?? pool;
+
+    const result = await db.query(
+      "UPDATE posts SET total_likes = total_likes - 1 WHERE id = $1 RETURNING *",
+      [postId],
+    );
+
+    return result;
   }
 }

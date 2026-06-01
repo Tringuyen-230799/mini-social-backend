@@ -22,6 +22,8 @@ export interface Post {
   updated_at: Date;
   is_deleted: boolean;
   delete_at: Date;
+  total_likes: number;
+  isliked: boolean;
 }
 export interface PostRespone extends Post {
   resources: Resource[];

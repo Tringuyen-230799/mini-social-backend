@@ -17,7 +17,11 @@ router.post(
   wrapper(controller.createPost.bind(controller)),
 );
 
-router.get("/", wrapper(controller.getAllPosts.bind(controller)));
+router.get(
+  "/",
+  authMiddleware,
+  wrapper(controller.getAllPosts.bind(controller)),
+);
 
 router.get("/:id", wrapper(controller.getPost.bind(controller)));
 
@@ -44,6 +48,18 @@ router.post(
   "/restore/:id",
   authMiddleware,
   wrapper(controller.restorePost.bind(controller)),
+);
+
+router.post(
+  "/like/:id",
+  authMiddleware,
+  wrapper(controller.likePost.bind(controller)),
+);
+
+router.post(
+  "/unlike/:id",
+  authMiddleware,
+  wrapper(controller.unLikePost.bind(controller)),
 );
 
 export default router;

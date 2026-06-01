@@ -28,12 +28,12 @@ export class ResourcesRepository {
   async findResourceByPost(
     postId: number,
     poolClient?: PoolClient,
-  ): Promise<Resource> {
+  ): Promise<Resource | undefined> {
     const db = poolClient ?? pool;
     const {
       rows: [resource],
     } = await db.query<Resource>(
-      `SELECT * FROM resources WHERE  post_id = $1`,
+      `SELECT * FROM resources WHERE post_id = $1`,
       [postId],
     );
 

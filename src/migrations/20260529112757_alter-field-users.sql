@@ -1,0 +1,9 @@
+ALTER TABLE users
+  ADD COLUMN is_verify BOOLEAN DEFAULT FALSE,
+  ADD COLUMN last_name VARCHAR(25);
+
+ALTER TABLE users 
+  RENAME COLUMN username TO first_name;
+
+ALTER TABLE users 
+  ALTER COLUMN first_name TYPE VARCHAR(25);
