@@ -1,4 +1,5 @@
 CREATE TABLE post_likes (
+    id SERIAL PRIMARY KEY,
     post_id INT NOT NULL,
     user_id INT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -6,7 +7,7 @@ CREATE TABLE post_likes (
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     
-    PRIMARY KEY (post_id, user_id)
+    UNIQUE (post_id, user_id)
 );
 
 CREATE TABLE notifications (

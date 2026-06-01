@@ -115,5 +115,12 @@ export class PostsController {
     return post;
   };
 
-  unLikePost = async (req: Request) => {};
+  unLikePost = async (req: Request) => {
+    const postId = Number(req.params.id);
+    const userId = Number(req.user?.id);
+
+    const post = await this.postsService.unlikePost(postId, userId);
+
+    return post;
+  };
 }

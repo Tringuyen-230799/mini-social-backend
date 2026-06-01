@@ -35,7 +35,7 @@ export class PostRepository {
 
     const {
       rows: [post],
-    } = await db.query<Post>(findPostQuery, [postId]);
+    } = await db.query<Post>(findPostQuery, [postId])
 
     return post;
   }

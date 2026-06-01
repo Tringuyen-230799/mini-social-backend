@@ -80,6 +80,17 @@ export class PostsService {
 
     const totalCount = await pool.query(`SELECT COUNT(*) FROM posts`);
 
+    const ownerLikedSelect = userId
+      ? ` (pl.user_id IS NOT NULL) as isliked, `
+      : "";
+    const ownerJoinClauses = userId
+      ? ` LEFT JOIN post_likes pl ON p.id = pl.post_id AND pl.user_id = $3 `
+      : "";
+
+    const groupByClasues = userId ? `, pl.user_id` : "";
+
+    const params = userId ? [limit, offset, userId] : [limit, offset];
+
     const { rows: posts } = await pool.query(
       `
       SELECT 
@@ -87,19 +98,22 @@ export class PostsService {
         p.content,
         p.created_at,
         p.updated_at,
+        p.total_likes,
+        ${ownerLikedSelect}
         json_agg(
           json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
         ) FILTER (WHERE r.id IS NOT NULL) as resources,
         json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar_url', u.avatar_url) as user
       FROM posts p
+      ${ownerJoinClauses}
       LEFT JOIN resources r ON p.id = r.post_id
       LEFT JOIN users u ON p.user_id = u.id
       WHERE p.is_deleted = false
-      GROUP BY p.id, u.id
+      GROUP BY p.id, u.id ${groupByClasues}
       ORDER BY p.created_at DESC, p.id DESC
       LIMIT $1 OFFSET $2
     `,
-      [limit, offset],
+      params,
     );
 
     return {

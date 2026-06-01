@@ -16,7 +16,7 @@ export const authMiddleware = async (
     const path = req.path;
     const method = req.method;
 
-    if (handleExcludeRoute(path, method)) {
+    if (handleExcludeRoute(path, method) && !authHeader) {
       next();
       return;
     }
