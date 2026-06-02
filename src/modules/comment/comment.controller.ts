@@ -1,6 +1,6 @@
 import { Request } from "express";
 import { CommentServices } from "./comment.service";
-import { CreateCommentDto } from "./dto/createCommentSchemas";
+import { CreateCommentDto } from "./dto/comment.dto";
 
 export class CommentController {
   private commentService: CommentServices;

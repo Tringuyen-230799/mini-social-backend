@@ -4,7 +4,7 @@ import { wrapper } from "~/shared/utils/wrapper";
 import { authMiddleware } from "~/middleware/auth.middleware";
 import { upload } from "~/config/multer.config";
 import { validate } from "~/middleware/validate.middleware";
-import { createPostSchema } from "./posts.types";
+import { CreatePostSchema } from "./schemas/posts.validator";
 
 const router = Router();
 const controller = new PostsController();
@@ -13,7 +13,7 @@ router.post(
   "/",
   authMiddleware,
   upload.single("images"),
-  validate(createPostSchema),
+  validate(CreatePostSchema),
   wrapper(controller.createPost.bind(controller)),
 );
 

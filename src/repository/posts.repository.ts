@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import pool from "~/config/database";
-import { DeletePostDto, Post } from "~/modules/posts/posts.types";
+import { DeletePostDto, Post } from "~/modules/posts/dto/posts.dto";
 import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
 

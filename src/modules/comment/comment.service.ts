@@ -6,7 +6,7 @@ import { withTransaction } from "~/shared/utils/transaction";
 import { CommentRepository } from "../../repository/comment.repository";
 import { CommentEntity } from "./comment.entity";
 import { MentionEntity } from "~/shared/entity/mentions.entity";
-import { CreateCommentResDto } from "./dto/createCommentSchemas";
+import { CreateCommentResDto } from "./dto/comment.dto";
 import { PostRepository } from "~/repository/posts.repository";
 import { MentionsRepository } from "~/repository/mentions.repo";
 

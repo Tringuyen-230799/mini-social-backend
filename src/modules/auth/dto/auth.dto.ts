@@ -1,8 +1,8 @@
-import { z } from "zod/v3";
-import { loginSchema, signupSchema } from "../schemas/auth.validator";
+import { SignupInput, LoginInput } from "../schemas/auth.validator";
 
-export type SignupDto = z.infer<typeof signupSchema>;
-export type LoginDto = z.infer<typeof loginSchema>;
+// Re-export for convenience
+export type SignupDto = SignupInput;
+export type LoginDto = LoginInput;
 
 export interface User {
   id: number;

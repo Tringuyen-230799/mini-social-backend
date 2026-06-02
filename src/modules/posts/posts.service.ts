@@ -5,7 +5,7 @@ import {
   Post,
   Resource,
   UpdatePostDto,
-} from "./posts.types";
+} from "./dto/posts.dto";
 import { BadRequestException } from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
 import cloudiary, { CloudiaryService } from "~/config/cloudiary";

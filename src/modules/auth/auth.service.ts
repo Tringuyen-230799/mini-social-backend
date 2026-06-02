@@ -1,11 +1,12 @@
 import pool from "~/config/database";
-import { SignupDto, LoginDto, AuthResponse, User } from "./dto/auth.dto";
+import { AuthResponse, User } from "./dto/auth.dto";
 import { generateToken } from "~/shared/utils/jwt";
 import { hashedPassword, isPasswordValid } from "~/shared/utils/bcrypt";
 import { BadRequestException } from "~/shared/utils/error-exception";
+import { LoginInput, SignupInput } from "./schemas/auth.validator";
 
 export class AuthService {
-  async signup(data: SignupDto): Promise<AuthResponse> {
+  async signup(data: SignupInput): Promise<AuthResponse> {
     const { firstName, lastName, email, password } = data;
 
     const existingUser = await pool.query(
@@ -44,7 +45,7 @@ export class AuthService {
     };
   }
 
-  async login(data: LoginDto): Promise<AuthResponse> {
+  async login(data: LoginInput): Promise<AuthResponse> {
     const { email, password } = data;
 
     const {
