@@ -1,5 +1,5 @@
 import pool from "~/config/database";
-import { SignupDto, LoginDto, AuthResponse, User } from "./auth.types";
+import { SignupDto, LoginDto, AuthResponse, User } from "./dto/auth.dto";
 import { generateToken } from "~/shared/utils/jwt";
 import { hashedPassword, isPasswordValid } from "~/shared/utils/bcrypt";
 import { BadRequestException } from "~/shared/utils/error-exception";

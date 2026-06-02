@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { PoolClient } from "pg";
-import { User } from "~/modules/auth/auth.types";
+import { User } from "~/modules/auth/dto/auth.dto";
 import { Post } from "~/modules/posts/posts.types";
 
 async function seedPosts(numOfRecord: number = 100, client: PoolClient) {

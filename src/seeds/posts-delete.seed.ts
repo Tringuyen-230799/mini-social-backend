@@ -1,5 +1,5 @@
 import { PoolClient } from "pg";
-import { User } from "~/modules/auth/auth.types";
+import { User } from "~/modules/auth/dto/auth.dto";
 
 async function seedDeletedPosts(client: PoolClient) {
   try {
