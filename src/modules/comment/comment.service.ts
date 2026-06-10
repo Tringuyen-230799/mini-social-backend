@@ -1,14 +1,18 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
 import { decodeBase64, encodeBase64 } from "~/shared/utils/common";
-import { NotFoundException } from "~/shared/utils/error-exception";
+import {
+  NotFoundException,
+  BadRequestException,
+} from "~/shared/utils/error-exception";
 import { withTransaction } from "~/shared/utils/transaction";
 import { CommentRepository } from "../../repository/comment.repository";
 import { CommentEntity } from "./comment.entity";
 import { MentionEntity } from "~/shared/entity/mentions.entity";
-import { CreateCommentResDto } from "./dto/comment.dto";
+import { AllCommentDto, CreateCommentResDto } from "./dto/comment.dto";
 import { PostRepository } from "~/repository/posts.repository";
 import { MentionsRepository } from "~/repository/mentions.repo";
+import { MAX_COMMENT_DEPTH } from "~/shared/constraint";
 
 export class CommentServices {
   private commentRepository: CommentRepository;
@@ -24,6 +28,7 @@ export class CommentServices {
     postId: number,
     userId: number,
     content: string,
+    depth: number,
     mentions: number[] | undefined,
     tx: PoolClient,
     parentId?: number | undefined,
@@ -32,6 +37,7 @@ export class CommentServices {
       postId,
       userId,
       content,
+      depth,
       parentId,
       tx,
     );
@@ -72,6 +78,8 @@ export class CommentServices {
         throw new NotFoundException("The post has been moved to the trash");
       }
 
+      let depth: number = 0;
+
       if (parentId) {
         const parentComments =
           await this.commentRepository.getParentCommentsByPost(
@@ -83,12 +91,21 @@ export class CommentServices {
         if (!parentComments?.length) {
           throw new NotFoundException("No Parent Comment Found");
         }
+
+        depth = parentComments[0].depth + 1;
+
+        if (depth > MAX_COMMENT_DEPTH) {
+          throw new BadRequestException(
+            `Maximum comment nesting depth of ${MAX_COMMENT_DEPTH} levels exceeded`,
+          );
+        }
       }
 
       const result = await this.createCommentWithMentions(
         postId,
         userId,
         content,
+        depth,
         mentions,
         tx,
         parentId,
@@ -116,9 +133,9 @@ export class CommentServices {
     const query = `
       SELECT
       c.*,
-      json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
+      json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar', u.avatar_url) AS user,
       (SELECT COUNT(*)::int FROM comments WHERE parent_comment_id = c.id) AS total_replies,
-        (SELECT json_agg(json_build_object('id', m.id, 'username', u2.username, 'avatar', u2.avatar_url)) 
+        (SELECT json_agg(json_build_object('id', m.id, 'username', CONCAT(u2.last_name, ' ', u2.first_name), 'avatar', u2.avatar_url)) 
          FROM mentions m
          JOIN users u2 ON m.mentioned_user_id = u2.id
          WHERE m.comment_id = c.id
@@ -132,7 +149,7 @@ export class CommentServices {
     const totalCountQuery =
       "SELECT COUNT(*) FROM comments WHERE post_id = $1 AND parent_comment_id IS NULL";
 
-    const { rows } = await client.query(query, params);
+    const { rows } = await client.query<AllCommentDto>(query, params);
 
     const { rows: rowCount } = await client.query(totalCountQuery, [postId]);
 
@@ -176,8 +193,9 @@ export class CommentServices {
     const offset = (page - 1) * limit;
     const query = `SELECT
         c.*,
-        json_build_object('id', u.id, 'username', u.username, 'avatar', u.avatar_url) AS user,
-        (SELECT json_agg(json_build_object('id', m.id, 'username', u2.username, 'avatar', u2.avatar_url)) 
+        json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar', u.avatar_url) AS user,
+        (SELECT COUNT(*)::int FROM comments WHERE parent_comment_id = c.id) AS total_replies,
+        (SELECT json_agg(json_build_object('id', m.id, 'username', CONCAT(u2.last_name, ' ', u2.first_name), 'avatar', u2.avatar_url)) 
          FROM mentions m
          JOIN users u2 ON m.mentioned_user_id = u2.id
          WHERE m.comment_id = c.id
@@ -191,7 +209,11 @@ export class CommentServices {
     const totalCountQuery =
       "SELECT COUNT(*) FROM comments WHERE parent_comment_id = $1";
 
-    const { rows } = await client.query(query, [commentId, offset, limit]);
+    const { rows } = await client.query<AllCommentDto>(query, [
+      commentId,
+      offset,
+      limit,
+    ]);
 
     const { rows: rowCount } = await client.query(totalCountQuery, [commentId]);
 

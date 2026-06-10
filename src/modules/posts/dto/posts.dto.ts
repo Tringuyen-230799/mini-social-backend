@@ -14,6 +14,7 @@ export interface Post {
   delete_at: Date;
   total_likes: number;
   isliked: boolean;
+  total_comment: number;
 }
 
 export interface PostRespone extends Post {

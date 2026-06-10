@@ -4,6 +4,7 @@ export type CommentEntity = {
   userId: number;
   content: string;
   parentId?: number | null;
+  depth: number;
   createdAt: Date;
   mentions?: number[];
 };

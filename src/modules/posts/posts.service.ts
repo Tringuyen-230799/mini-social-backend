@@ -13,20 +13,17 @@ import { PostRepository } from "~/repository/posts.repository";
 import { Resources } from "~/shared/types/resources";
 import { ResourcesRepository } from "~/repository/resources.repository";
 import PostLikesRepository from "~/repository/postLikes.repository";
-import { UserRepository } from "~/repository/user.repository";
 
 export class PostsService {
   private cloudinaryServices: CloudiaryService;
   private postRepository: PostRepository;
   private resourcesRepository: ResourcesRepository;
   private postLikesRepository: PostLikesRepository;
-  private userRepository: UserRepository;
   constructor() {
     this.cloudinaryServices = cloudiary;
     this.postRepository = new PostRepository();
     this.resourcesRepository = new ResourcesRepository();
     this.postLikesRepository = new PostLikesRepository();
-    this.userRepository = new UserRepository();
   }
 
   async createPost(
@@ -103,6 +100,7 @@ export class PostsService {
         json_agg(
           json_build_object('id', r.id, 'url', r.url, 'alt_text', r.alt_text, 'type', r.resource_type)
         ) FILTER (WHERE r.id IS NOT NULL) as resources,
+        (SELECT COUNT(*)::int FROM comments WHERE post_id = p.id) as total_comment,
         json_build_object('id', u.id, 'username', CONCAT(u.last_name, ' ', u.first_name), 'avatar_url', u.avatar_url) as user
       FROM posts p
       ${ownerJoinClauses}

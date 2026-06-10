@@ -7,3 +7,4 @@ export const FOLDER_UPLOAD = {
   VIDEOS: 'videos'
 }
 export const TIME_DELETE_PERMANENT = 30;
+export const MAX_COMMENT_DEPTH = 3;
