@@ -1,4 +1,4 @@
-import { JwtPayload } from "~/modules/auth/auth.types";
+import { JwtPayload } from "~/modules/auth/dto/auth.dto";
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from "../constraint";
 

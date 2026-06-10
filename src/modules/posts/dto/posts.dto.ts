@@ -1,18 +1,8 @@
-import { z } from "zod/v3";
+import { CreatePostInput, UpdatePostInput } from "../schemas/posts.validator";
 
-export const createPostSchema = z.object({
-  content: z.string().min(1).max(255),
-});
-
-export const updatePostSchema = z.object({
-  content: z.string().min(1).max(255).optional(),
-  userId: z.number(),
-  oldImageIds: z.array(z.string()).optional(),
-  id: z.number(),
-});
-
-export type CreatePostDto = z.infer<typeof createPostSchema>;
-export type UpdatePostDto = z.infer<typeof updatePostSchema>;
+// Re-export for convenience
+export type CreatePostDto = CreatePostInput;
+export type UpdatePostDto = UpdatePostInput;
 
 export interface Post {
   id: number;
@@ -24,7 +14,9 @@ export interface Post {
   delete_at: Date;
   total_likes: number;
   isliked: boolean;
+  total_comment: number;
 }
+
 export interface PostRespone extends Post {
   resources: Resource[];
   user: {

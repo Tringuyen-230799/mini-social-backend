@@ -1,5 +1,3 @@
-import { Resource } from "~/modules/posts/posts.types";
-
 export const decodeBase64 = (cursor?: string): any => {
   if (!cursor?.length) return null;
   const decoded = Buffer.from(cursor, "base64").toString("utf-8");

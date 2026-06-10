@@ -2,8 +2,8 @@ import { Router } from "express";
 import { AuthController } from "./auth.controller";
 import { wrapper } from "~/shared/utils/wrapper";
 import { validate } from "~/middleware/validate.middleware";
-import { signupSchema, loginSchema } from "./auth.types";
 import { authMiddleware } from "~/middleware/auth.middleware";
+import { loginSchema, signupSchema } from "./schemas/auth.validator";
 
 const router = Router();
 const controller = new AuthController();

@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
-import { User } from "~/modules/auth/auth.types";
+import { User } from "~/modules/auth/dto/auth.dto";
 
 export class UserRepository {
   async findUserById(

@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
-import { Resource } from "~/modules/posts/posts.types";
+import { Resource } from "~/modules/posts/dto/posts.dto";
 
 export class ResourcesRepository {
   async deleteResource(id: string | number, poolClient?: PoolClient) {

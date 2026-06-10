@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { User } from "~/modules/auth/auth.types";
+import { User } from "~/modules/auth/dto/auth.dto";
 import { UserRepository } from "~/repository/user.repository";
 import { verifyToken } from "~/shared/utils/jwt";
 import { handleExcludeRoute } from "./helpers/excludeRoute";
