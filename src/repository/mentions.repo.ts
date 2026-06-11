@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 import pool from "~/config/database";
-import { MentionEntity } from "../entity/mentions.entity";
+import { MentionEntity } from "~/shared/entity/mentions.entity";
 
 export class MentionsRepository {
   async createMentions(
