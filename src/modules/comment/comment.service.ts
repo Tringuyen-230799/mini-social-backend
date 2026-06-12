@@ -79,8 +79,6 @@ export class CommentServices {
     return withTransaction(async (tx) => {
       const post = await this.postRepository.getPostById(postId, tx);
 
-      console.log(post);
-
       if (!post) {
         throw new NotFoundException("No Post Found");
       }
@@ -134,11 +132,13 @@ export class CommentServices {
 
       const { user } = post;
 
-      await this.getSocket().sendCommentNotification(post.user.id, {
-        entityId: notification.entityId,
-        user: user,
-        message: `${user.username} has commented on your post: '<b>${comment.content}</b>'`,
-      });
+      if (user.id !== userId) {
+        await this.getSocket().sendCommentNotification(post.user.id, {
+          entityId: notification.entity_id,
+          user: user,
+          message: `has commented on your post: '<b>${comment.content}</b>'`,
+        });
+      }
 
       return comment;
     });

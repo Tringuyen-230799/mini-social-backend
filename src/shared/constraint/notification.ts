@@ -1,5 +1,4 @@
 export const NOTIFICATION_EVENT = {
-  NEW_NOTIFICATION: "notification",
   COMMENT: "notification:comment",
   LIKE: "notification:like",
   FOLLOW: "notification:follow",

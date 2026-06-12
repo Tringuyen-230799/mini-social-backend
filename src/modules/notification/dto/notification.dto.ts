@@ -14,10 +14,10 @@ export interface CreateNotificationDto {
 
 export interface NotificationResponseDto {
   id: number;
-  notifierId: number;
-  receiverId: number;
-  notificationType: NotificationType;
-  entityId: number;
-  isRead: boolean;
+  notifier_id: number;
+  receiver_id: number;
+  notification_type: NotificationType;
+  entity_id: number;
+  is_read: boolean;
   createdAt: Date;
 }

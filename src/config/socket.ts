@@ -94,7 +94,7 @@ export class SocketService {
         return;
       }
 
-      this.io.to(socketId).emit(NOTIFICATION_EVENT.NEW_NOTIFICATION, {
+      this.io.to(socketId).emit(NOTIFICATION_EVENT.COMMENT, {
         type: NOTIFICATION_TYPE.COMMENT,
         ...payload,
       });
