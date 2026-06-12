@@ -1,6 +1,10 @@
 import { Pool, PoolClient } from "pg";
 import pool from "~/config/database";
-import { DeletePostDto, Post } from "~/modules/posts/dto/posts.dto";
+import {
+  DeletePostDto,
+  Post,
+  PostRespone,
+} from "~/modules/posts/dto/posts.dto";
 import { TIME_DELETE_PERMANENT } from "~/shared/constraint";
 import { BadRequestException } from "~/shared/utils/error-exception";
 
@@ -35,15 +39,18 @@ export class PostRepository {
 
     const {
       rows: [post],
-    } = await db.query<Post>(findPostQuery, [postId])
+    } = await db.query<Post>(findPostQuery, [postId]);
 
     return post;
   }
 
-  async getPostById(postId: number, poolClient?: PoolClient): Promise<Post> {
+  async getPostById(
+    postId: number,
+    poolClient?: PoolClient,
+  ): Promise<PostRespone> {
     const db = poolClient ?? pool;
 
-    const result = await db.query(
+    const result = await db.query<PostRespone>(
       `
       SELECT 
         p.id,

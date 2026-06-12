@@ -13,15 +13,24 @@ import { AllCommentDto, CreateCommentResDto } from "./dto/comment.dto";
 import { PostRepository } from "~/repository/posts.repository";
 import { MentionsRepository } from "~/repository/mentions.repo";
 import { MAX_COMMENT_DEPTH } from "~/shared/constraint";
+import { NotificationType } from "../notification/dto/notification.dto";
+import { NotificationService } from "../notification/notification.service";
+import { SocketService } from "~/config/socket";
 
 export class CommentServices {
   private commentRepository: CommentRepository;
   private postRepository: PostRepository;
   private mentionsRepository: MentionsRepository;
+  private notificationService: NotificationService;
   constructor() {
     this.commentRepository = new CommentRepository();
     this.postRepository = new PostRepository();
     this.mentionsRepository = new MentionsRepository();
+    this.notificationService = new NotificationService();
+  }
+
+  private getSocket() {
+    return SocketService.getInstance();
   }
 
   private async createCommentWithMentions(
@@ -68,7 +77,7 @@ export class CommentServices {
     mentions?: number[],
   ): Promise<CreateCommentResDto> {
     return withTransaction(async (tx) => {
-      const post = await this.postRepository.findPostById(postId, tx);
+      const post = await this.postRepository.getPostById(postId, tx);
 
       if (!post) {
         throw new NotFoundException("No Post Found");
@@ -101,7 +110,7 @@ export class CommentServices {
         }
       }
 
-      const result = await this.createCommentWithMentions(
+      const comment = await this.createCommentWithMentions(
         postId,
         userId,
         content,
@@ -111,7 +120,27 @@ export class CommentServices {
         parentId,
       );
 
-      return result;
+      const notification = await this.notificationService.createNotifaction(
+        {
+          entityId: comment.parentId ?? comment.id,
+          notificationType: NotificationType.COMMENT,
+          notifierId: userId,
+          receiverId: post.user.id,
+        },
+        tx,
+      );
+
+      const { user } = post;
+
+      if (user.id !== userId) {
+        await this.getSocket().sendCommentNotification(post.user.id, {
+          entityId: notification.entity_id,
+          user: user,
+          message: `has commented on your post: '<b>${comment.content}</b>'`,
+        });
+      }
+
+      return comment;
     });
   }
 

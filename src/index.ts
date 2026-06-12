@@ -5,10 +5,14 @@ import "dotenv/config";
 import pool from "./config/database";
 import cors from "cors";
 import cron from "./config/cron";
+import { createServer } from "http";
+import { SocketService } from "./config/socket";
 
 function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
+  const httpServer = createServer(app);
+  SocketService.getInstance(httpServer);
   app.use(
     cors({
       origin: process.env.ORIGIN || "http://localhost:3000",
@@ -27,7 +31,7 @@ function startServer() {
   const cronJob = cron;
   cronJob.scheduleDeletePostTask();
 
-  app.listen(PORT, () => {
+  httpServer.listen(PORT, () => {
     console.log("Server is running on port ", PORT);
   });
 
